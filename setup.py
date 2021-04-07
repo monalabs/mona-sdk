@@ -5,13 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.7",
+    version="0.0.1",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/monalabs/mona-sdk",
+    download_url='http://pypi.python.org/pypi/mona-client/',
     install_requires=[
         "pyjwt>=1.7.1",
         "python-jose>=3.2.0",
