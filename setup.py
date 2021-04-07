@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="mona_sdk",
+    name="src",
     version="0.0.1",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/monalabs/mona-sdk",
     download_url='http://pypi.python.org/pypi/mona-client/',
+    packages=setuptools.find_packages(),
     install_requires=[
         "pyjwt>=1.7.1",
         "python-jose>=3.2.0",
@@ -23,6 +24,4 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "mona_sdk"},
-    packages=setuptools.find_packages(where="mona_sdk"),
 )
