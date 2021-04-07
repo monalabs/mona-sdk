@@ -1,2 +1,2 @@
 """The Mona python client package"""
-name = "mona-sdk"
+name = "mona_sdk"

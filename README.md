@@ -1,7 +1,9 @@
 # Mona Python SDK
 ## Installation
 
-< Add installation instructions >
+```
+$ pip install mona_sdk
+```
 
 
 ## Logging
