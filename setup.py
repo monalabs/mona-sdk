@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/monalabs/mona-sdk",
-    download_url='http://pypi.python.org/pypi/mona-client/',
+    download_url='http://pypi.python.org/pypi/mona-sdk/',
     install_requires=[
         "pyjwt>=1.7.1",
         "python-jose>=3.2.0",
