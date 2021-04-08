@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.3",
+    version="0.0.4",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",
@@ -23,6 +23,5 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "mona_sdk"},
-    packages=setuptools.find_packages(where="mona_sdk"),
+    packages=setuptools.find_packages(),
 )
