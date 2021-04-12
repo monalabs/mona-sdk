@@ -5,34 +5,6 @@
 $ pip install mona_sdk
 ```
 
-
-## Logging
-
-Unrelated to the actual data being exported, Mona's client may log 
-debug/info/warning/error for various reasons, including to help with debugging 
-communications with Mona's server. To make logging as adaptable to your system 
-as possible, Mona is using its own logger named "mona-logger". You can configure 
-it in your code by just calling
-```
-logging.getLogger("mona-logger")
-```
-
-and then setting handlers and formatters as you please.
-
-You can also configure Mona's logging using the following environment variables:
-
-1. MONA_LOGGING_LEVEL - set this to the wanted level, according to python's logging
-   constants:
-   - "CRITICAL" (50)
-   - "ERROR" (40)
-   - "WARNING" (30)
-   - "INFO" (20)
-   - "DEBUG" (10)
-   - "NOTSET" (0)
-    
-2. MONA_LOGGER_NAME - you can change Mona's logger name. 
-
-
 ## Quick Start and Example
 
 1. Install as described above.
@@ -108,7 +80,33 @@ Mona uses several environment variables you can set as you prefer:
   (default value: 3).
 - WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
-  
+
+## Logging
+
+Unrelated to the actual data being exported, Mona's client may log 
+debug/info/warning/error for various reasons, including to help with debugging 
+communications with Mona's server. To make logging as adaptable to your system 
+as possible, Mona is using its own logger named "mona-logger". You can configure 
+it in your code by just calling
+```
+logging.getLogger("mona-logger")
+```
+
+and then setting handlers and formatters as you please.
+
+You can also configure Mona's logging using the following environment variables:
+
+1. MONA_LOGGING_LEVEL - set this to the wanted level, according to python's logging
+   constants:
+   - "CRITICAL" (50)
+   - "ERROR" (40)
+   - "WARNING" (30)
+   - "INFO" (20)
+   - "DEBUG" (10)
+   - "NOTSET" (0)
+    
+2. MONA_LOGGER_NAME - you can change Mona's logger name. 
+
 
 ## Special field names
 
