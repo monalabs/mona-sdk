@@ -13,7 +13,7 @@ $ pip install mona_sdk
 3. Set environment variables as mentioned below.
 4. Instrument code with Mona's client as seen below.
 
-###Data exporting arguments:
+### Data exporting arguments:
 We recommend you get acquainted with Mona's key concepts 
 [in our docs](https://docs.monalabs.io/docs/concepts "Mona's concepts").
 
