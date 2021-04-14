@@ -87,7 +87,7 @@ Unrelated to the actual data being exported, Mona's client may log
 debug/info/warning/error for various reasons, including to help with debugging 
 communications with Mona's server. To make logging as adaptable to your system 
 as possible, Mona is using its own logger named "mona-logger". You can configure 
-it in your code by just calling
+it in yoursh code by just calling
 ```
 logging.getLogger("mona-logger")
 ```
