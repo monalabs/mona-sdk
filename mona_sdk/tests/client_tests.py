@@ -7,10 +7,10 @@ from datetime import datetime
 from importlib import reload
 from unittest.mock import patch
 
-import src.client
-from src.client import Client, MonaSingleMessage
-from src.authentication import _get_auth_response_with_retries
-from src.client_exceptions import MonaExportException, MonaAuthenticationException
+import mona_sdk.client
+from mona_sdk.client import Client, MonaSingleMessage
+from mona_sdk.authentication import _get_auth_response_with_retries
+from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationException
 
 # This token (when decoded) contains this payload: {"tenantId": "test_tenant_id"}, so
 # that client._get_user_id() function could work properly.
@@ -21,7 +21,7 @@ TEST_TOKEN = (
 
 
 class ClientTests(unittest.TestCase):
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def _init_test_client(self, mock_request):
         """
         :return: An initialized client.
@@ -38,10 +38,10 @@ class ClientTests(unittest.TestCase):
     def _set_env_var(env_var_name, env_var_value):
         os.environ[env_var_name] = env_var_value
         # Reloading both modules so the env vars will be updated with the new value.
-        reload(src.validation)
-        reload(src.authentication)
+        reload(mona_sdk.validation)
+        reload(mona_sdk.authentication)
 
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def test_wrong_key_or_secret_with_exceptions(self, mock_request):
         """
         Asserts that initializing Mona's client with wrong/missing
@@ -95,7 +95,7 @@ class ClientTests(unittest.TestCase):
             str(err.exception),
         )
 
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def test_wrong_key_or_secret_without_exceptions(self, mock_request):
         """
         Asserts that initializing Mona's client with wrong
@@ -115,7 +115,7 @@ class ClientTests(unittest.TestCase):
         good_client = self._init_test_client()
         self.assertTrue(good_client.is_active())
 
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def test_export_without_exception(self, mock_request):
         """
         Asserts an export() call with different parameters causes
@@ -181,7 +181,7 @@ class ClientTests(unittest.TestCase):
         )
         self.assertFalse(res)
 
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def test_export_with_exception(self, mock_request):
         """
         Asserts an export() call with wrong parameters causes
@@ -206,7 +206,7 @@ class ClientTests(unittest.TestCase):
                 )
             )
 
-    @patch("src.client.requests.request")
+    @patch("mona_sdk.client.requests.request")
     def _assert_batch_return_values(
         self, events, expected_total, expected_sent, expected_failed, mock_request
     ):
