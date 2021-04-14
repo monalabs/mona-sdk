@@ -8,7 +8,7 @@ $ pip install mona_sdk
 ## Quick Start and Example
 
 1. Install as described above.
-2. get an "admin"-roled API key and secret from 
+2. Get an "admin"-roled API key and secret from 
    [your dashboard](https://dashboard.monalabs.io/admin "Team management").
 3. Set environment variables as mentioned below.
 4. Instrument code with Mona's client as seen below.
