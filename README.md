@@ -1,6 +1,9 @@
 # Mona Python SDK
-## Installation
+Mona’s SDK is a python based package which enables you to securely access 
+Mona’s API and export your data to Mona directly from within your code, 
+either message-by-message or as a batch.
 
+## Installation
 ```
 $ pip install mona_sdk
 ```
