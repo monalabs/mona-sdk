@@ -246,7 +246,7 @@ class Client:
         }
 
     @Decorators.refresh_token_if_needed
-    def save_config(self, config, commit_message):
+    def upload_config(self, config, commit_message):
         """
         Uploads a new configuration, as a json-serializable dict.
         The configuration file enables you to define how the exported data should be
@@ -273,20 +273,23 @@ class Client:
             "commitMessage": commit_message,
             "user_id": self._user_id,
         }
+        error_message = "Could not upload the new configuration."
         try:
+            print("sending upload request")
             upload_response = requests.post(
                 f"https://api{self._user_id}.monalabs.io/upload_config",
                 headers=get_basic_auth_header(self._api_key),
                 json=config_to_upload,
             )
             response_data = upload_response.json()
+
         except Exception:
-            return handle_export_error("Could not upload the new configuration.")
+            return handle_export_error(error_message)
 
         if not upload_response.ok:
-            return handle_export_error("Could not upload the new configuration.")
+            return handle_export_error(error_message)
 
-        return response_data
+        return response_data['response_data']
 
     @Decorators.refresh_token_if_needed
     def get_config(self):
