@@ -260,7 +260,7 @@ class Client:
             "YOUR_USER_ID": <your_new_configuration>
             }
         :param commit_message: (str)
-        :return: A dict holding the configuration change data:
+        :return: A dict holding the configuration's changes data:
         {
             "new_config_id": <the new configuration ID>, (str)
             "new config": <the new configuration that was just uploaded>, (dict)
