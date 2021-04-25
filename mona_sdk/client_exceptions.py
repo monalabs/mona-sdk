@@ -9,3 +9,7 @@ class MonaExportException(Exception):
 
 class MonaAuthenticationException(Exception):
     pass
+
+
+class MonaConfigUploadException(Exception):
+    pass

@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+from os import environ
 from typing import List
 from dataclasses import dataclass
 
@@ -20,6 +21,7 @@ import jwt
 import requests
 from requests.exceptions import ConnectionError
 
+from mona_sdk.client_exceptions import MonaConfigUploadException
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -33,7 +35,10 @@ from .authentication import (
     is_authenticated,
     first_authentication,
     get_current_token_by_api_key,
+    get_basic_auth_header,
 )
+
+RAISE_CONFIG_EXCEPTIONS = environ.get("RAISE_CONFIG_EXCEPTIONS", False)
 
 
 @dataclass
@@ -94,6 +99,7 @@ class Client:
         # Update user's mona url for future requests.
         self._user_id = self._get_user_id()
         self._rest_api_url = f"https://incoming{self._user_id}.monalabs.io/export"
+        self._app_server_url = f"https://api{self._user_id}.monalabs.io"
 
     def is_active(self):
         """
@@ -202,11 +208,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer "
-                f"{get_current_token_by_api_key(self._api_key)}",
-            },
+            headers=get_basic_auth_header(self._api_key),
             json={"userId": self._user_id, "messages": messages},
         )
 
@@ -242,3 +244,75 @@ class Client:
             "sent": total - failed,
             "failure_reasons": failure_reasons,
         }
+
+    @Decorators.refresh_token_if_needed
+    def save_config(self, config, commit_message):
+        """
+        Uploads a new configuration, as a json-serializable dict.
+        The configuration file enables you to define how the exported data should be
+        aggregated and analyzed in Mona, as well as your insight and alerting
+        preferences.
+        Find more information on creating your configuration at:
+        https://docs.monalabs.io/.
+        :param config: (dict)
+            json-serializable dict of the following format:
+            {
+            "YOUR_USER_ID": <your_new_configuration>
+            }
+        :param commit_message: (str)
+        :return: A dict holding the configuration change data:
+        {
+            "new_config_id": <the new configuration ID>, (str)
+            "new config": <the new configuration that was just uploaded>, (dict)
+            "verse_diff": <A list containing all verses diff> (list)
+        }
+        """
+        config_to_upload = {
+            "config": config,
+            "author": self._api_key,
+            "commitMessage": commit_message,
+            "user_id": self._user_id,
+        }
+        try:
+            upload_response = requests.post(
+                f"https://api{self._user_id}.monalabs.io/upload_config",
+                headers=get_basic_auth_header(self._api_key),
+                json=config_to_upload,
+            )
+            response_data = upload_response.json()
+        except Exception:
+            return handle_export_error("Could not upload the new configuration.")
+
+        if not upload_response.ok:
+            return handle_export_error("Could not upload the new configuration.")
+
+        return response_data
+
+    @Decorators.refresh_token_if_needed
+    def get_config(self):
+        """
+        :return: A json-serializable dict with the current defined configuration.
+        """
+        try:
+            config_response = requests.post(
+                f"https://api{self._user_id}.monalabs.io/configs",
+                headers=get_basic_auth_header(self._api_key),
+                data="{}",
+            )
+            config_data = config_response.json()
+        except Exception:
+            return self._handle_config_error(
+                "Could not get server response with the current config."
+            )
+
+        return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
+
+    def _handle_config_error(self, error_message):
+        """
+        Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
+        else returns false.
+        """
+        self._logger.error(error_message)
+        if RAISE_CONFIG_EXCEPTIONS:
+            raise MonaConfigUploadException(error_message)
+        return False
