@@ -275,7 +275,6 @@ class Client:
         }
         error_message = "Could not upload the new configuration."
         try:
-            print("sending upload request")
             upload_response = requests.post(
                 f"https://api{self._user_id}.monalabs.io/upload_config",
                 headers=get_basic_auth_header(self._api_key),
@@ -289,13 +288,14 @@ class Client:
         if not upload_response.ok:
             return handle_export_error(error_message)
 
-        return response_data['response_data']
+        return response_data["response_data"]
 
     @Decorators.refresh_token_if_needed
     def get_config(self):
         """
         :return: A json-serializable dict with the current defined configuration.
         """
+        error_message = "Could not get server response with the current config."
         try:
             config_response = requests.post(
                 f"https://api{self._user_id}.monalabs.io/configs",
@@ -304,9 +304,10 @@ class Client:
             )
             config_data = config_response.json()
         except Exception:
-            return self._handle_config_error(
-                "Could not get server response with the current config."
-            )
+            return self._handle_config_error(error_message)
+
+        if not config_response.ok:
+            return self._handle_config_error(error_message)
 
         return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
 
