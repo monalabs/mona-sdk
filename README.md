@@ -67,6 +67,24 @@ for context_instance in my_data:
         
 export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
+### Uploading a new configuration
+Mona's sdk provides a simple way to upload a new Mona configuration, using Client.upload_config():
+```
+new_configuration = {"YOUR_COMPANY_TENANT_ID": <Your new Mona configuration>}
+upload_result = my_client.upload_config(new_configuration, "My commit message")
+
+# the return value format will be:
+# upload_result:
+# {
+#    'new_config_id': <the new configuration ID>, 
+#    'new_config': <the config that was just uploaded>, 
+#    'verses_diff': <a list of verses changes>
+# }
+```
+You can also receive your current Mona configuration:
+```
+my_current_mona_config = my_client.get_config()
+```
 
 ## Environment variables
 
@@ -78,6 +96,9 @@ Mona uses several environment variables you can set as you prefer:
 - RAISE_EXPORT_EXCEPTIONS - set to true if you would like Mona's client to
   raise export related exceptions. When set to false and an export (or part of it) fails,
   the failure reason will be logged (default value: False).
+- RAISE_CONFIG_EXCEPTIONS - set to true if you would like Mona's client to
+  raise config related exceptions. When set to false, and such an exception is met,
+  the function will log an error and return false (default value: False).
 - NUM_OF_RETRIES_FOR_AUTHENTICATION - Number of retries to authenticate in case 
   Mona's client unexpectedly cannot get an authentication response from the server
   (default value: 3).
