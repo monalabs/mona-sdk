@@ -261,14 +261,13 @@ class Client:
         :param config: (dict)
             json-serializable dict of the following format:
             {
-            "YOUR_USER_ID": <your_new_configuration>
+            "YOUR_COMPANY_TENANT_ID": <your_new_configuration>
             }
         :param commit_message: (str)
-        :return: A dict holding the configuration's changes data:
+        :return: A dict holding the upload data:
         {
-            "new_config_id": <the new configuration ID>, (str)
-            "new config": <the new configuration that was just uploaded>, (dict)
-            "verse_diff": <A list containing all verses diff> (list)
+            "success": <was the upload successful>, (bool)
+            "new_config_id": <the new configuration ID> (str)
         }
         """
         config_to_upload = {
@@ -277,21 +276,26 @@ class Client:
             "commitMessage": commit_message,
             "user_id": self._user_id,
         }
+        upload_output = {"success": False, "new_config_id": ""}
         try:
             upload_response = requests.post(
                 f"{self._app_server_url}/upload_config",
                 headers=get_basic_auth_header(self._api_key),
                 json=config_to_upload,
             )
-            response_data = upload_response.json()
+            response_data = upload_response.json()["response_data"]
+            upload_output["new_config_id"] = response_data["new_config_id"]
+            upload_output["success"] = upload_response.ok
+
+            if not upload_output["success"]:
+                # Raise an exception is asked to.
+                self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         except Exception:
-            return handle_export_error(UPLOAD_CONFIG_ERROR_MESSAGE)
+            # Raise an exception is asked to.
+            self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
-        if not upload_response.ok:
-            return handle_export_error(UPLOAD_CONFIG_ERROR_MESSAGE)
-
-        return response_data["response_data"]
+        return upload_output
 
     @Decorators.refresh_token_if_needed
     def get_config(self):

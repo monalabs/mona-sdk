@@ -74,12 +74,10 @@ new_configuration = {"YOUR_COMPANY_TENANT_ID": <Your new Mona configuration>}
 upload_result = my_client.upload_config(new_configuration, "My commit message")
 
 # the return value format will be:
-# upload_result:
-# {
-#    'new_config_id': <the new configuration ID>, 
-#    'new_config': <the config that was just uploaded>, 
-#    'verses_diff': <a list of verses changes>
-# }
+# upload_result == {
+#    "success": <was the upload successful>, (bool)
+#    "new_config_id": <the new configuration ID> (str)
+#}
 ```
 You can also receive your current Mona configuration:
 ```
