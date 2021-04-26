@@ -13,7 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
-from os import environ
 from typing import List
 from dataclasses import dataclass
 
@@ -22,6 +21,7 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import MonaConfigUploadException
+from .client_util import get_boolean_value_for_env_var
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -38,7 +38,11 @@ from .authentication import (
     get_basic_auth_header,
 )
 
-RAISE_CONFIG_EXCEPTIONS = environ.get("RAISE_CONFIG_EXCEPTIONS", False)
+RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
+    "RAISE_CONFIG_EXCEPTIONS", False
+)
+GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
+UPLOAD_CONFIG_ERROR_MESSAGE = "Could not upload the new configuration."
 
 
 @dataclass
@@ -273,20 +277,19 @@ class Client:
             "commitMessage": commit_message,
             "user_id": self._user_id,
         }
-        error_message = "Could not upload the new configuration."
         try:
             upload_response = requests.post(
-                f"https://api{self._user_id}.monalabs.io/upload_config",
+                f"{self._app_server_url}/upload_config",
                 headers=get_basic_auth_header(self._api_key),
                 json=config_to_upload,
             )
             response_data = upload_response.json()
 
         except Exception:
-            return handle_export_error(error_message)
+            return handle_export_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         if not upload_response.ok:
-            return handle_export_error(error_message)
+            return handle_export_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         return response_data["response_data"]
 
@@ -295,19 +298,18 @@ class Client:
         """
         :return: A json-serializable dict with the current defined configuration.
         """
-        error_message = "Could not get server response with the current config."
         try:
             config_response = requests.post(
-                f"https://api{self._user_id}.monalabs.io/configs",
+                f"{self._app_server_url}/configs",
                 headers=get_basic_auth_header(self._api_key),
                 data="{}",
             )
             config_data = config_response.json()
         except Exception:
-            return self._handle_config_error(error_message)
+            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
         if not config_response.ok:
-            return self._handle_config_error(error_message)
+            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
         return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
 
