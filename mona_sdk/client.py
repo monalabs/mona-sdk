@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
 
@@ -42,7 +43,10 @@ RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
     "RAISE_CONFIG_EXCEPTIONS", False
 )
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
-UPLOAD_CONFIG_ERROR_MESSAGE = "Could not upload the new configuration."
+UPLOAD_CONFIG_ERROR_MESSAGE = (
+    "Could not upload the new configuration, please check it is valid."
+)
+APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
 
 
 @dataclass
@@ -291,8 +295,11 @@ class Client:
                 # Raise an exception is asked to.
                 self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
-        except Exception:
-            # Raise an exception is asked to.
+        except ConnectionError:
+            # Raise an exception if asked to.
+            self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+        except JSONDecodeError:
+            # Raise an exception if asked to.
             self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         return upload_output
@@ -309,10 +316,12 @@ class Client:
                 data="{}",
             )
             config_data = config_response.json()
-        except Exception:
-            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+            if not config_response.ok:
+                return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
-        if not config_response.ok:
+        except ConnectionError:
+            return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+        except JSONDecodeError:
             return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
         return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
