@@ -277,7 +277,7 @@ class Client:
         config_to_upload = {
             "config": config,
             "author": self._api_key,
-            "commitMessage": commit_message,
+            "commit_message": commit_message,
             "user_id": self._user_id,
         }
         upload_output = {"success": False, "new_config_id": ""}
