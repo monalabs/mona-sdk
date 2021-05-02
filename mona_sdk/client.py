@@ -262,11 +262,8 @@ class Client:
         preferences.
         Find more information on creating your configuration at:
         https://docs.monalabs.io/.
-        :param config: (dict)
-            json-serializable dict of the following format:
-            {
-            "YOUR_COMPANY_TENANT_ID": <your_new_configuration>
-            }
+        :param config: (dict) your configuration, no need for your tenant id as key,
+        first layer of keys should be the context classes.
         :param commit_message: (str)
         :return: A dict holding the upload data:
         {
@@ -275,7 +272,7 @@ class Client:
         }
         """
         config_to_upload = {
-            "config": config,
+            "config": {self._user_id: config},
             "author": self._api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,

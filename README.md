@@ -70,7 +70,8 @@ export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ### Uploading a new configuration
 Mona's sdk provides a simple way to upload a new Mona configuration, using Client.upload_config():
 ```
-new_configuration = {"YOUR_COMPANY_TENANT_ID": <Your new Mona configuration>}
+# Note: no need to add your tenant_id as the key, just the configuration itself.
+new_configuration = <Your new Mona configuration>
 upload_result = my_client.upload_config(new_configuration, "My commit message")
 
 # the return value format will be:
