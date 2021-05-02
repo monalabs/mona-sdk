@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
 
@@ -20,6 +21,8 @@ import jwt
 import requests
 from requests.exceptions import ConnectionError
 
+from mona_sdk.client_exceptions import MonaConfigUploadException
+from .client_util import get_boolean_value_for_env_var
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -33,7 +36,17 @@ from .authentication import (
     is_authenticated,
     first_authentication,
     get_current_token_by_api_key,
+    get_basic_auth_header,
 )
+
+RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
+    "RAISE_CONFIG_EXCEPTIONS", False
+)
+GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
+UPLOAD_CONFIG_ERROR_MESSAGE = (
+    "Could not upload the new configuration, please check it is valid."
+)
+APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
 
 
 @dataclass
@@ -94,6 +107,7 @@ class Client:
         # Update user's mona url for future requests.
         self._user_id = self._get_user_id()
         self._rest_api_url = f"https://incoming{self._user_id}.monalabs.io/export"
+        self._app_server_url = f"https://api{self._user_id}.monalabs.io"
 
     def is_active(self):
         """
@@ -202,11 +216,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer "
-                f"{get_current_token_by_api_key(self._api_key)}",
-            },
+            headers=get_basic_auth_header(self._api_key),
             json={"userId": self._user_id, "messages": messages},
         )
 
@@ -242,3 +252,86 @@ class Client:
             "sent": total - failed,
             "failure_reasons": failure_reasons,
         }
+
+    @Decorators.refresh_token_if_needed
+    def upload_config(self, config, commit_message):
+        """
+        Uploads a new configuration, as a json-serializable dict.
+        The configuration file enables you to define how the exported data should be
+        aggregated and analyzed in Mona, as well as your insight and alerting
+        preferences.
+        Find more information on creating your configuration at:
+        https://docs.monalabs.io/.
+        :param config: (dict)
+            json-serializable dict of the following format:
+            {
+            "YOUR_COMPANY_TENANT_ID": <your_new_configuration>
+            }
+        :param commit_message: (str)
+        :return: A dict holding the upload data:
+        {
+            "success": <was the upload successful>, (bool)
+            "new_config_id": <the new configuration ID> (str)
+        }
+        """
+        config_to_upload = {
+            "config": config,
+            "author": self._api_key,
+            "commit_message": commit_message,
+            "user_id": self._user_id,
+        }
+        upload_output = {"success": False, "new_config_id": ""}
+        try:
+            upload_response = requests.post(
+                f"{self._app_server_url}/upload_config",
+                headers=get_basic_auth_header(self._api_key),
+                json=config_to_upload,
+            )
+            response_data = upload_response.json()["response_data"]
+            upload_output["new_config_id"] = response_data["new_config_id"]
+            upload_output["success"] = upload_response.ok
+
+            if not upload_output["success"]:
+                # Raise an exception is asked to.
+                self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
+
+        except ConnectionError:
+            # Raise an exception if asked to.
+            self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+        except JSONDecodeError:
+            # Raise an exception if asked to.
+            self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
+
+        return upload_output
+
+    @Decorators.refresh_token_if_needed
+    def get_config(self):
+        """
+        :return: A json-serializable dict with the current defined configuration.
+        """
+        try:
+            config_response = requests.post(
+                f"{self._app_server_url}/configs",
+                headers=get_basic_auth_header(self._api_key),
+                data="{}",
+            )
+            config_data = config_response.json()
+            if not config_response.ok:
+                return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+
+        except ConnectionError:
+            return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+        except JSONDecodeError:
+            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+
+        return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
+
+    def _handle_config_error(self, error_message):
+        """
+        Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
+        else returns false.
+        """
+        self._logger.error(error_message)
+        if RAISE_CONFIG_EXCEPTIONS:
+            raise MonaConfigUploadException(error_message)
+        return False

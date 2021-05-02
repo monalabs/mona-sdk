@@ -304,6 +304,14 @@ def _refresh_token(api_key):
     return True
 
 
+def get_basic_auth_header(api_key):
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer "
+        f"{get_current_token_by_api_key(api_key)}",
+    }
+
+
 class Decorators(object):
     @classmethod
     def refresh_token_if_needed(cls, decorated):
