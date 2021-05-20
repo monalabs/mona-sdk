@@ -41,11 +41,11 @@ REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
 
 AUTH_API_TOKEN_URL = os.environ.get(
     "AUTH_API_TOKEN_URL",
-    "https://signup.monalabs.io/access/identity/resources/auth/v1/api-token",
+    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token",
 )
 REFRESH_TOKEN_URL = os.environ.get(
     "REFRESH_TOKEN_URL",
-    "https://signup.monalabs.io/access/identity/resources/auth/v1/api-token/"
+    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token/"
     "token/refresh",
 )
 BASIC_HEADER = {"Content-Type": "application/json"}
