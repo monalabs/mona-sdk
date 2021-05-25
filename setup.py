@@ -17,6 +17,7 @@ setuptools.setup(
         "pyjwt==1.7.1",
         "python-jose>=3.2.0",
         "requests-mock>=1.8.0",
+        "dataclasses==0.8",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
