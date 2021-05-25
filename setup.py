@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.10",
+    version="0.0.11",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/monalabs/mona-sdk",
     download_url='http://pypi.python.org/pypi/mona-sdk/',
     install_requires=[
-        "pyjwt>=1.7.1",
+        "pyjwt==1.7.1",
         "python-jose>=3.2.0",
         "requests-mock>=1.8.0",
     ],
