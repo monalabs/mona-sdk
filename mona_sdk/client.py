@@ -84,6 +84,13 @@ class MonaSingleMessage:
     contextId: str = None
     exportTimestamp: int or str = None
 
+    def get_dict(self):
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if key in MonaSingleMessage.__dataclass_fields__.keys()
+        }
+
 
 class Client:
     """
