@@ -31,7 +31,7 @@ RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
 def mona_messages_to_dicts_validation(events):
     try:
         # Get all MonsSingleMessage as dicts.
-        events = [message.__dict__ for message in events]
+        events = [message.get_dict() for message in events]
     except TypeError:
         return handle_export_error(
             "export_batch must get an iterable of MonaSingleMessage."
