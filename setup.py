@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.13",
+    version="0.0.14",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",
@@ -17,7 +17,7 @@ setuptools.setup(
         "pyjwt==1.7.1",
         "python-jose>=3.2.0",
         "requests-mock>=1.8.0",
-        "dataclasses==0.8",
+        "dataclasses==0.8; python_version<'3.7'",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
