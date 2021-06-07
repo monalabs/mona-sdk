@@ -88,20 +88,20 @@ my_current_mona_config = my_client.get_config()
 ## Environment variables
 
 Mona uses several environment variables you can set as you prefer:
-- RAISE_AUTHENTICATION_EXCEPTIONS - Set to true if you would like Mona's client to
+- MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS - Set to true if you would like Mona's client to
   raise authentication related exceptions. When set to false and such an exception is met,
   every function call will return false.
   Use client.is_active() in order to check authentication status. (default value: False).
-- RAISE_EXPORT_EXCEPTIONS - set to true if you would like Mona's client to
+- MONA_SDK_RAISE_EXPORT_EXCEPTIONS - set to true if you would like Mona's client to
   raise export related exceptions. When set to false and an export (or part of it) fails,
   the failure reason will be logged (default value: False).
-- RAISE_CONFIG_EXCEPTIONS - set to true if you would like Mona's client to
+- MONA_SDK_RAISE_CONFIG_EXCEPTIONS - set to true if you would like Mona's client to
   raise config related exceptions. When set to false, and such an exception is met,
   the function will log an error and return false (default value: False).
-- NUM_OF_RETRIES_FOR_AUTHENTICATION - Number of retries to authenticate in case 
+- MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION - Number of retries to authenticate in case 
   Mona's client unexpectedly cannot get an authentication response from the server
   (default value: 3).
-- WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
+- MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
 
 ## Logging

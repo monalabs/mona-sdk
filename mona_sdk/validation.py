@@ -24,7 +24,7 @@ from .client_util import is_dict_contains_fields, get_boolean_value_for_env_var
 from .client_exceptions import MonaExportException
 
 RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
-    "RAISE_EXPORT_EXCEPTIONS", False
+    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
 )
 
 

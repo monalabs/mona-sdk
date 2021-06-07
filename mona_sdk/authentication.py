@@ -36,15 +36,15 @@ from .client_exceptions import MonaAuthenticationException
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
 # the client will automatically refresh the token to a new one).
 REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
-    hours=int(os.environ.get("REFRESH_TOKEN_SAFETY_MARGIN", 12))
+    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 12))
 )
 
 AUTH_API_TOKEN_URL = os.environ.get(
-    "AUTH_API_TOKEN_URL",
+    "MONA_SDK_AUTH_API_TOKEN_URL",
     "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token",
 )
 REFRESH_TOKEN_URL = os.environ.get(
-    "REFRESH_TOKEN_URL",
+    "MONA_SDK_REFRESH_TOKEN_URL",
     "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token/"
     "token/refresh",
 )
@@ -54,20 +54,20 @@ TOKEN_EXPIRED_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
 NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
-    os.environ.get("NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
+    os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
 )
 
 # Time to wait (in seconds) between retries in case the authentication server failed to
 # respond.
 WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
-    os.environ.get("WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
+    os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
 )
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
 # Use client.is_active() in order to check authentication status.
 RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
-    "RAISE_AUTHENTICATION_EXCEPTIONS", False
+    "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
 )
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)

@@ -40,7 +40,7 @@ from .authentication import (
 )
 
 RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
-    "RAISE_CONFIG_EXCEPTIONS", False
+    "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
 )
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
