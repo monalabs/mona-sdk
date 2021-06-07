@@ -49,7 +49,7 @@ class ClientTests(unittest.TestCase):
         setting RAISE_AUTHENTICATION_EXCEPTIONS to True).
         """
         mock_request.return_value.ok = False
-        self._set_env_var("RAISE_AUTHENTICATION_EXCEPTIONS", "True")
+        self._set_env_var("MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", "True")
 
         mock_request.return_value.json.return_value = {
             "errors": [
@@ -103,7 +103,7 @@ class ClientTests(unittest.TestCase):
         Client.is_authenticated() will return the expected value.
         """
 
-        self._set_env_var("RAISE_AUTHENTICATION_EXCEPTIONS", "False")
+        self._set_env_var("MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", "False")
         mock_request.return_value.ok = False
         mock_request.return_value.json.return_value = {
             "errors": ["Invalid authentication"]
@@ -121,7 +121,7 @@ class ClientTests(unittest.TestCase):
         Asserts an export() call with different parameters causes
         the correct response.
         """
-        self._set_env_var("RAISE_EXPORT_EXCEPTIONS", "False")
+        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "False")
         test_mona_client = self._init_test_client()
         good_message = {"a": "some data"}
 
@@ -187,7 +187,7 @@ class ClientTests(unittest.TestCase):
         Asserts an export() call with wrong parameters causes
         the correct exception when RAISE_EXPORT_EXCEPTIONS = True.
         """
-        self._set_env_var("RAISE_EXPORT_EXCEPTIONS", "True")
+        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "True")
         test_mona_client = self._init_test_client()
         mock_request.return_value.ok = False
         mock_request.return_value.json.return_value = {
@@ -216,7 +216,7 @@ class ClientTests(unittest.TestCase):
         :param expected_sent: The mount of events with correct content/structure.
         :param expected_failed: The amount of events with incorrect content/structure.
         """
-        self._set_env_var("RAISE_EXPORT_EXCEPTIONS", "False")
+        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "False")
         test_mona_client = self._init_test_client()
 
         mock_request.return_value.ok = not (expected_failed > 0)
@@ -231,7 +231,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(res["failed"], expected_failed)
 
         # Assert export_batch raise an exception when RAISE_EXPORT_EXCEPTIONS is true.
-        self._set_env_var("RAISE_EXPORT_EXCEPTIONS", "True")
+        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "True")
         test_mona_client = self._init_test_client()
         if expected_failed > 0:
             with self.assertRaises(MonaExportException):
