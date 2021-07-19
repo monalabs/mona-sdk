@@ -46,7 +46,7 @@ my_mona_client = Client(api_key, secret)
 
 # One can send a single message to Mona's servers by calling export() with a 
 # MonaSingleMessage object:
-succseed_to_export = my_mona_client.export(MonaSingleMessage(
+succeed_to_export = my_mona_client.export(MonaSingleMessage(
     message={'monitoring_information_1': '1', 'monitoring_information_2': '2'}, 
     contextClass='MY_CONTEXT_CLASS_NAME', 
     contextId='CONTEXT_INSTANCE_UNIQUE_ID', 
