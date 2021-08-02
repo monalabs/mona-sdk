@@ -22,7 +22,7 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import MonaConfigUploadException
-from .client_util import get_boolean_value_for_env_var
+from .client_util import get_boolean_value_for_env_var, set_env_vars
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -98,13 +98,29 @@ class Client:
     API.
     """
 
-    def __init__(self, api_key, secret):
+    def __init__(
+        self,
+        api_key,
+        secret,
+        raise_authentication_exceptions=None,
+        raise_export_exception=None,
+        raise_config_exception=None,
+        num_of_retries_for_authentication=None,
+        wait_time_for_authentication_retries=None,
+    ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
         :param api_key: An api key provided to you by Mona.
         :param secret: The secret corresponding to the given api_key.
         """
+        set_env_vars(
+            raise_authentication_exceptions,
+            raise_export_exception,
+            raise_config_exception,
+            num_of_retries_for_authentication,
+            wait_time_for_authentication_retries,
+        )
         self._logger = get_logger()
         self._api_key = api_key
         could_authenticate = first_authentication(api_key, secret)
