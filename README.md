@@ -1,5 +1,7 @@
 # Mona Python SDK
 ![alt text](https://github.com/monalabs/mona-sdk/blob/set_env_vars_on_constructor/mona_logo.png?raw=true)
+
+
 Mona’s SDK is a python based package which enables you to securely access 
 Mona’s API and export your data to Mona directly from within your code, 
 either message-by-message or as a batch.
