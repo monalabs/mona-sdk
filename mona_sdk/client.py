@@ -22,7 +22,7 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import MonaConfigUploadException
-from .client_util import get_boolean_value_for_env_var, set_env_vars
+from .env_vars_util import get_env_var, set_env_vars
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -39,9 +39,6 @@ from .authentication import (
     get_basic_auth_header,
 )
 
-RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
-)
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
@@ -352,6 +349,6 @@ class Client:
         else returns false.
         """
         self._logger.error(error_message)
-        if RAISE_CONFIG_EXCEPTIONS:
+        if get_env_var("MONA_SDK_RAISE_CONFIG_EXCEPTIONS"):
             raise MonaConfigUploadException(error_message)
         return False

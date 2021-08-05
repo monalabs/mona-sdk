@@ -27,6 +27,7 @@ from threading import Lock
 import requests
 from requests.models import Response
 
+from .env_vars_util import get_env_var
 from .logger import get_logger
 from .client_util import get_boolean_value_for_env_var
 from .client_exceptions import MonaAuthenticationException
@@ -51,24 +52,6 @@ REFRESH_TOKEN_URL = os.environ.get(
 BASIC_HEADER = {"Content-Type": "application/json"}
 TOKEN_EXPIRED_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
-# Number of retries to authenticate in case the authentication server failed to
-# respond.
-NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
-    os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
-)
-
-# Time to wait (in seconds) between retries in case the authentication server failed to
-# respond.
-WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
-    os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
-)
-
-# Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
-# authenticate, every function call will return false.
-# Use client.is_active() in order to check authentication status.
-RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
-)
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -135,8 +118,8 @@ def _request_refresh_token_with_retries(refresh_token_key):
 
 def _get_auth_response_with_retries(
     response_generator,
-    num_of_retries=NUM_OF_RETRIES_FOR_AUTHENTICATION,
-    auth_wait_time_sec=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
+    num_of_retries=get_env_var("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION"),
+    auth_wait_time_sec=get_env_var("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC"),
 ):
     """
     Sends an authentication request (first time/refresh) with a retry mechanism.
@@ -261,7 +244,7 @@ def _handle_authentications_error(error_message):
     RAISE_AUTHENTICATION_EXCEPTIONS is true, else returns false.
     """
     get_logger().error(error_message)
-    if RAISE_AUTHENTICATION_EXCEPTIONS:
+    if get_env_var("MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS"):
         raise MonaAuthenticationException(error_message)
     return False
 
