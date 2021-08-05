@@ -98,7 +98,16 @@ class Client:
     API.
     """
 
-    def __init__(self, api_key, secret):
+    def __init__(
+        self,
+        api_key,
+        secret,
+        raise_authentication_exceptions=None,
+        raise_export_exceptions=None,
+        raise_config_exceptions=None,
+        num_of_retries_for_authentication=None,
+        wait_time_for_authentication_retries=None,
+    ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
@@ -106,8 +115,16 @@ class Client:
         :param secret: The secret corresponding to the given api_key.
         """
         self._logger = get_logger()
-        self._api_key = api_key
-        could_authenticate = first_authentication(api_key, secret)
+        self.api_key = api_key
+        self.secret = secret
+
+        self.raise_authentication_exceptions = raise_authentication_exceptions
+        self.raise_export_exceptions = raise_export_exceptions
+        self.raise_config_exceptions = raise_config_exceptions
+        self.num_of_retries_for_authentication = num_of_retries_for_authentication
+        self.wait_time_for_authentication_retries = wait_time_for_authentication_retries
+
+        could_authenticate = first_authentication(self)
         if not could_authenticate:
             return
 
@@ -124,14 +141,14 @@ class Client:
         Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
         is set to False.
         """
-        return is_authenticated(self._api_key)
+        return is_authenticated(self.api_key)
 
     def _get_user_id(self):
         """
         :return: The customer's user id (tenant id).
         """
         decoded_token = jwt.decode(
-            get_current_token_by_api_key(self._api_key), verify=False
+            get_current_token_by_api_key(self.api_key), verify=False
         )
         return decoded_token["tenantId"]
 
@@ -169,13 +186,15 @@ class Client:
         return self._export_batch_inner(events)
 
     def _export_batch_inner(self, events: List[MonaSingleMessage]):
-        events = mona_messages_to_dicts_validation(events)
+        events = mona_messages_to_dicts_validation(events, self.raise_export_exceptions)
         if not events:
             return False
 
         messages_to_send = []
         for message_event in events:
-            if not validate_mona_single_message(message_event):
+            if not validate_mona_single_message(
+                message_event, self.raise_export_exceptions
+            ):
                 return False
 
             message_copy = dict(message_event)
@@ -197,7 +216,9 @@ class Client:
         try:
             rest_api_response = self._send_mona_rest_api_request(messages_to_send)
         except ConnectionError:
-            return handle_export_error("Cannot connect to rest-api")
+            return handle_export_error(
+                "Cannot connect to rest-api", self.raise_export_exceptions
+            )
 
         # Create the response and return it.
         client_response = Client._create_client_response(
@@ -206,7 +227,8 @@ class Client:
         )
         if client_response["failed"] > 0:
             handle_export_error(
-                f"Some messages didn't pass validation: {client_response}"
+                f"Some messages didn't pass validation: {client_response}",
+                self.raise_export_exceptions,
             )
         else:
             self._logger.info(
@@ -223,7 +245,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_basic_auth_header(self._api_key),
+            headers=get_basic_auth_header(self.api_key),
             json={"userId": self._user_id, "messages": messages},
         )
 
@@ -280,7 +302,7 @@ class Client:
         """
         config_to_upload = {
             "config": {self._user_id: config},
-            "author": self._api_key,
+            "author": self.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
@@ -288,7 +310,7 @@ class Client:
         try:
             upload_response = requests.post(
                 f"{self._app_server_url}/upload_config",
-                headers=get_basic_auth_header(self._api_key),
+                headers=get_basic_auth_header(self.api_key),
                 json=config_to_upload,
             )
             response_data = upload_response.json()["response_data"]
@@ -316,7 +338,7 @@ class Client:
         try:
             config_response = requests.post(
                 f"{self._app_server_url}/configs",
-                headers=get_basic_auth_header(self._api_key),
+                headers=get_basic_auth_header(self.api_key),
                 data="{}",
             )
             config_data = config_response.json()
@@ -335,7 +357,12 @@ class Client:
         Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
         else returns false.
         """
+        should_raise_config_exceptions = (
+            self.raise_config_exceptions
+            if self.raise_config_exceptions is not None
+            else RAISE_CONFIG_EXCEPTIONS
+        )
         self._logger.error(error_message)
-        if RAISE_CONFIG_EXCEPTIONS:
+        if should_raise_config_exceptions:
             raise MonaConfigUploadException(error_message)
         return False

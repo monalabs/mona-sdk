@@ -1,4 +1,7 @@
 # Mona Python SDK
+![Mona logo](https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true)
+
+
 Mona’s SDK is a python based package which enables you to securely access 
 Mona’s API and export your data to Mona directly from within your code, 
 either message-by-message or as a batch.
@@ -103,6 +106,16 @@ Mona uses several environment variables you can set as you prefer:
   (default value: 3).
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
+  
+Another easy way to set these variables is to pass them to the client constructor as follows:
+```
+my_mona_client = Client(
+    api_key,
+    secret,
+    raise_export_exceptions=True,
+    raise_authentication_exceptions=True,
+)
+```
 
 ## Logging
 
@@ -110,7 +123,7 @@ Unrelated to the actual data being exported, Mona's client may log
 debug/info/warning/error for various reasons, including to help with debugging 
 communications with Mona's server. To make logging as adaptable to your system 
 as possible, Mona is using its own logger named "mona-logger". You can configure 
-it in yoursh code by just calling
+it in your code by just calling
 ```
 logging.getLogger("mona-logger")
 ```
