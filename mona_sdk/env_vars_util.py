@@ -59,11 +59,11 @@ def get_env_var(env_var_name):
 
 
 def set_env_vars(
-    raise_authentication_exceptions,
-    raise_export_exception,
-    raise_config_exception,
-    num_of_retries_for_authentication,
-    wait_time_for_authentication_retries,
+    raise_authentication_exceptions=None,
+    raise_export_exception=None,
+    raise_config_exception=None,
+    num_of_retries_for_authentication=None,
+    wait_time_for_authentication_retries=None,
 ):
     """
     Change the values of the given env vars.
