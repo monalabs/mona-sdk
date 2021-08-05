@@ -22,7 +22,6 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import MonaConfigUploadException
-from .env_vars_util import get_env_var, set_env_vars
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -31,12 +30,13 @@ from .validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
+from .env_vars_util import get_env_var, set_env_vars
 from .authentication import (
     Decorators,
     is_authenticated,
     first_authentication,
-    get_current_token_by_api_key,
     get_basic_auth_header,
+    get_current_token_by_api_key,
 )
 
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."

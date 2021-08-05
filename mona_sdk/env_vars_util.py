@@ -81,4 +81,3 @@ def set_env_vars(
     for env_var in env_vars:
         if env_vars[env_var] is not None:
             os.environ[env_var] = env_vars[env_var]
-

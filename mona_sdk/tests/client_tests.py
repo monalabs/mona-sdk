@@ -32,7 +32,6 @@ class ClientTests(unittest.TestCase):
         }
         return Client("", "")
 
-
     @patch("mona_sdk.client.requests.request")
     def test_wrong_key_or_secret_with_exceptions(self, mock_request):
         """

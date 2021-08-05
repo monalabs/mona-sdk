@@ -27,9 +27,8 @@ from threading import Lock
 import requests
 from requests.models import Response
 
-from .env_vars_util import get_env_var
 from .logger import get_logger
-from .client_util import get_boolean_value_for_env_var
+from .env_vars_util import get_env_var
 from .client_exceptions import MonaAuthenticationException
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
@@ -290,8 +289,7 @@ def _refresh_token(api_key):
 def get_basic_auth_header(api_key):
     return {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer "
-        f"{get_current_token_by_api_key(api_key)}",
+        "Authorization": f"Bearer " f"{get_current_token_by_api_key(api_key)}",
     }
 
 
