@@ -1,5 +1,5 @@
 # Mona Python SDK
-![Mona logo](https://github.com/monalabs/mona-sdk/blob/set_env_vars_on_constructor/mona_logo.png?raw=true)
+![Mona logo](https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true)
 
 
 Mona’s SDK is a python based package which enables you to securely access 
@@ -106,6 +106,17 @@ Mona uses several environment variables you can set as you prefer:
   (default value: 3).
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
+  
+Another easy way to set these environment variables is to use the client constructor as follows:
+```
+my_mona_client = Client(
+    api_key,
+    secret,
+    raise_export_exceptions="True",
+    raise_authentication_exceptions="True",
+)
+```
+Note that you should pass these values as strings similar to defining environment variables.
 
 ## Logging
 

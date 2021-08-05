@@ -113,7 +113,7 @@ class ClientTests(unittest.TestCase):
         the correct response.
         """
 
-        set_env_vars(raise_export_exception="False")
+        set_env_vars(raise_export_exceptions="False")
         test_mona_client = self._init_test_client()
         good_message = {"a": "some data"}
 
@@ -180,7 +180,7 @@ class ClientTests(unittest.TestCase):
         the correct exception when RAISE_EXPORT_EXCEPTIONS = True.
         """
 
-        set_env_vars(raise_export_exception="True")
+        set_env_vars(raise_export_exceptions="True")
         test_mona_client = self._init_test_client()
         mock_request.return_value.ok = False
         mock_request.return_value.json.return_value = {
@@ -209,7 +209,7 @@ class ClientTests(unittest.TestCase):
         :param expected_sent: The mount of events with correct content/structure.
         :param expected_failed: The amount of events with incorrect content/structure.
         """
-        set_env_vars(raise_export_exception="False")
+        set_env_vars(raise_export_exceptions="False")
         test_mona_client = self._init_test_client()
 
         mock_request.return_value.ok = not (expected_failed > 0)
@@ -224,7 +224,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(res["failed"], expected_failed)
 
         # Assert export_batch raise an exception when RAISE_EXPORT_EXCEPTIONS is true.
-        set_env_vars(raise_export_exception="True")
+        set_env_vars(raise_export_exceptions="True")
         test_mona_client = self._init_test_client()
         if expected_failed > 0:
             with self.assertRaises(MonaExportException):

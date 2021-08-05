@@ -9,17 +9,17 @@ from mona_sdk.client_util import get_boolean_value_for_env_var
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
 # Use client.is_active() in order to check authentication status.
-def _get_raise_authentication_exception_env_var():
+def _get_raise_authentication_exceptions_env_var():
     return get_boolean_value_for_env_var(
         "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
     )
 
 
-def _get_raise_export_exception_env_var():
+def _get_raise_export_exceptions_env_var():
     return get_boolean_value_for_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False)
 
 
-def _get_raise_config_exception_env_var():
+def _get_raise_config_exceptions_env_var():
     return get_boolean_value_for_env_var("MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False)
 
 
@@ -41,10 +41,10 @@ def _get_wait_time_for_authentication_retries_sec_env_var():
 
 ENV_VARS_GETTERS_MAP = {
     "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS": (
-        _get_raise_authentication_exception_env_var
+        _get_raise_authentication_exceptions_env_var
     ),
-    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS": _get_raise_export_exception_env_var,
-    "MONA_SDK_RAISE_CONFIG_EXCEPTIONS": _get_raise_config_exception_env_var,
+    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS": _get_raise_export_exceptions_env_var,
+    "MONA_SDK_RAISE_CONFIG_EXCEPTIONS": _get_raise_config_exceptions_env_var,
     "MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION": (
         _get_num_of_retries_for_authentication_env_var
     ),
@@ -60,24 +60,24 @@ def get_env_var(env_var_name):
 
 def set_env_vars(
     raise_authentication_exceptions=None,
-    raise_export_exception=None,
-    raise_config_exception=None,
+    raise_export_exceptions=None,
+    raise_config_exceptions=None,
     num_of_retries_for_authentication=None,
     wait_time_for_authentication_retries=None,
 ):
     """
     Change the values of the given env vars.
     """
-    env_vars = {
+    env_vars_new_values = {
         "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS": raise_authentication_exceptions,
-        "MONA_SDK_RAISE_EXPORT_EXCEPTIONS": raise_export_exception,
-        "MONA_SDK_RAISE_CONFIG_EXCEPTIONS": raise_config_exception,
+        "MONA_SDK_RAISE_EXPORT_EXCEPTIONS": raise_export_exceptions,
+        "MONA_SDK_RAISE_CONFIG_EXCEPTIONS": raise_config_exceptions,
         "MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION": num_of_retries_for_authentication,
         "MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC": (
             wait_time_for_authentication_retries
         ),
     }
 
-    for env_var in env_vars:
-        if env_vars[env_var] is not None:
-            os.environ[env_var] = env_vars[env_var]
+    for env_var in env_vars_new_values:
+        if env_vars_new_values[env_var] is not None:
+            os.environ[env_var] = env_vars_new_values[env_var]

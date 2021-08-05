@@ -100,8 +100,8 @@ class Client:
         api_key,
         secret,
         raise_authentication_exceptions=None,
-        raise_export_exception=None,
-        raise_config_exception=None,
+        raise_export_exceptions=None,
+        raise_config_exceptions=None,
         num_of_retries_for_authentication=None,
         wait_time_for_authentication_retries=None,
     ):
@@ -113,8 +113,8 @@ class Client:
         """
         set_env_vars(
             raise_authentication_exceptions,
-            raise_export_exception,
-            raise_config_exception,
+            raise_export_exceptions,
+            raise_config_exceptions,
             num_of_retries_for_authentication,
             wait_time_for_authentication_retries,
         )
