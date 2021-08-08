@@ -112,8 +112,11 @@ Another easy way to set these variables is to pass them to the client constructo
 my_mona_client = Client(
     api_key,
     secret,
-    raise_export_exceptions=True,
     raise_authentication_exceptions=True,
+    raise_export_exceptions=True,
+    raise_config_exceptions=True,
+    num_of_retries_for_authentication=6,
+    wait_time_for_authentication_retries=0,
 )
 ```
 
