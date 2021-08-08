@@ -28,7 +28,6 @@ import requests
 from requests.models import Response
 
 from .logger import get_logger
-from .client_util import get_boolean_value_for_env_var
 from .client_exceptions import MonaAuthenticationException
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
@@ -51,24 +50,6 @@ REFRESH_TOKEN_URL = os.environ.get(
 BASIC_HEADER = {"Content-Type": "application/json"}
 TOKEN_EXPIRED_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
-# Number of retries to authenticate in case the authentication server failed to
-# respond.
-NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
-    os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
-)
-
-# Time to wait (in seconds) between retries in case the authentication server failed to
-# respond.
-WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
-    os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
-)
-
-# Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
-# authenticate, every function call will return false.
-# Use client.is_active() in order to check authentication status.
-RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
-)
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -142,8 +123,8 @@ def _request_refresh_token_with_retries(refresh_token_key, mona_client):
 
 def _get_auth_response_with_retries(
     response_generator,
-    num_of_retries=None,
-    auth_wait_time_sec=None,
+    num_of_retries,
+    auth_wait_time_sec,
 ):
     """
     Sends an authentication request (first time/refresh) with a retry mechanism.
@@ -151,17 +132,6 @@ def _get_auth_response_with_retries(
             A function call that sends the wanted REST request.
     :return: The response received from the authentication server.
     """
-    num_of_retries = (
-        num_of_retries
-        if num_of_retries is not None
-        else NUM_OF_RETRIES_FOR_AUTHENTICATION
-    )
-    auth_wait_time_sec = (
-        auth_wait_time_sec
-        if auth_wait_time_sec is not None
-        else WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC
-    )
-
     for i in range(num_of_retries + 1):
         try:
             response = response_generator()
@@ -273,16 +243,11 @@ def _calculate_and_set_time_to_refresh(api_key):
         )
 
 
-def _handle_authentications_error(error_message, should_raise_exception=None):
+def _handle_authentications_error(error_message, should_raise_exception):
     """
     Logs an error and raises MonaAuthenticationException if
     RAISE_AUTHENTICATION_EXCEPTIONS is true, else returns false.
     """
-    should_raise_exception = (
-        should_raise_exception
-        if should_raise_exception is not None
-        else RAISE_AUTHENTICATION_EXCEPTIONS
-    )
     get_logger().error(error_message)
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)

@@ -23,10 +23,6 @@ from .logger import get_logger
 from .client_util import is_dict_contains_fields, get_boolean_value_for_env_var
 from .client_exceptions import MonaExportException
 
-RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
-)
-
 
 def mona_messages_to_dicts_validation(events, raise_export_exceptions):
     try:
@@ -101,16 +97,11 @@ def validate_inner_message_type(message):
     return True
 
 
-def handle_export_error(error_message, should_raise_exception=None):
+def handle_export_error(error_message, should_raise_exception):
     """
     Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
     else returns false.
     """
-    should_raise_exception = (
-        should_raise_exception
-        if should_raise_exception is not None
-        else RAISE_EXPORT_EXCEPTIONS
-    )
     get_logger().error(error_message)
     if should_raise_exception:
         raise MonaExportException(error_message)

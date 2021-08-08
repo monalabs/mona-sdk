@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+import os
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
@@ -39,9 +40,33 @@ from .authentication import (
     get_basic_auth_header,
 )
 
+# Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
+# authenticate, every function call will return false.
+# Use client.is_active() in order to check authentication status.
+RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
+    "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
+)
+
+RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
+    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
+)
+
 RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
 )
+
+# Number of retries to authenticate in case the authentication server failed to
+# respond.
+NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
+    os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
+)
+
+# Time to wait (in seconds) between retries in case the authentication server failed to
+# respond.
+WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
+    os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
+)
+
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
@@ -102,11 +127,11 @@ class Client:
         self,
         api_key,
         secret,
-        raise_authentication_exceptions=None,
-        raise_export_exceptions=None,
-        raise_config_exceptions=None,
-        num_of_retries_for_authentication=None,
-        wait_time_for_authentication_retries=None,
+        raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
+        raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
+        raise_config_exceptions=RAISE_CONFIG_EXCEPTIONS,
+        num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
+        wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -357,12 +382,7 @@ class Client:
         Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
         else returns false.
         """
-        should_raise_config_exceptions = (
-            self.raise_config_exceptions
-            if self.raise_config_exceptions is not None
-            else RAISE_CONFIG_EXCEPTIONS
-        )
         self._logger.error(error_message)
-        if should_raise_config_exceptions:
+        if self.raise_config_exceptions:
             raise MonaConfigUploadException(error_message)
         return False

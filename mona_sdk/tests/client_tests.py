@@ -1,13 +1,10 @@
 """
 Test module for client.py
 """
-import os
 import unittest
 from datetime import datetime
-from importlib import reload
 from unittest.mock import patch
 
-import mona_sdk.client
 from mona_sdk.client import Client, MonaSingleMessage
 from mona_sdk.authentication import _get_auth_response_with_retries
 from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationException
@@ -22,7 +19,12 @@ TEST_TOKEN = (
 
 class ClientTests(unittest.TestCase):
     @patch("mona_sdk.client.requests.request")
-    def _init_test_client(self, mock_request):
+    def _init_test_client(
+        self,
+        mock_request,
+        raise_export_exceptions=False,
+        raise_authentication_exceptions=False,
+    ):
         """
         :return: An initialized client.
         """
@@ -32,14 +34,12 @@ class ClientTests(unittest.TestCase):
             "refreshToken": "test_refresh_token",
             "expires": "Mon, 16 Feb 2099 15:26:22 GMT",
         }
-        return Client("", "")
-
-    @staticmethod
-    def _set_env_var(env_var_name, env_var_value):
-        os.environ[env_var_name] = env_var_value
-        # Reloading both modules so the env vars will be updated with the new value.
-        reload(mona_sdk.validation)
-        reload(mona_sdk.authentication)
+        return Client(
+            "",
+            "",
+            raise_export_exceptions=raise_export_exceptions,
+            raise_authentication_exceptions=raise_authentication_exceptions,
+        )
 
     @patch("mona_sdk.client.requests.request")
     def test_wrong_key_or_secret_with_exceptions(self, mock_request):
@@ -49,7 +49,6 @@ class ClientTests(unittest.TestCase):
         setting RAISE_AUTHENTICATION_EXCEPTIONS to True).
         """
         mock_request.return_value.ok = False
-        self._set_env_var("MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", "True")
 
         mock_request.return_value.json.return_value = {
             "errors": [
@@ -58,7 +57,7 @@ class ClientTests(unittest.TestCase):
             ]
         }
         with self.assertRaises(MonaAuthenticationException) as err:
-            Client(None, None)
+            Client(None, None, raise_authentication_exceptions=True)
         self.assertEqual(
             "Mona's client could not authenticate. errors: clientId must be a string, "
             "secret must be a string",
@@ -69,7 +68,7 @@ class ClientTests(unittest.TestCase):
             "errors": ["secret must be a string"]
         }
         with self.assertRaises(MonaAuthenticationException) as err:
-            Client("<API_KEY>", None)
+            Client("<API_KEY>", None, raise_authentication_exceptions=True)
         self.assertEqual(
             "Mona's client could not authenticate. errors: secret must be a string",
             str(err.exception),
@@ -79,7 +78,7 @@ class ClientTests(unittest.TestCase):
             "errors": ["clientId must be a string"]
         }
         with self.assertRaises(MonaAuthenticationException) as err:
-            Client(None, "<SECRET>")
+            Client(None, "<SECRET>", raise_authentication_exceptions=True)
         self.assertEqual(
             "Mona's client could not authenticate. errors: clientId must be a string",
             str(err.exception),
@@ -89,7 +88,7 @@ class ClientTests(unittest.TestCase):
             "errors": ["Invalid authentication"]
         }
         with self.assertRaises(MonaAuthenticationException) as err:
-            Client("WRONG_KEY", "WRONG_SECRET")
+            Client("WRONG_KEY", "WRONG_SECRET", raise_authentication_exceptions=True)
         self.assertEqual(
             "Mona's client could not authenticate. errors: Invalid authentication",
             str(err.exception),
@@ -103,7 +102,6 @@ class ClientTests(unittest.TestCase):
         Client.is_authenticated() will return the expected value.
         """
 
-        self._set_env_var("MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", "False")
         mock_request.return_value.ok = False
         mock_request.return_value.json.return_value = {
             "errors": ["Invalid authentication"]
@@ -121,7 +119,7 @@ class ClientTests(unittest.TestCase):
         Asserts an export() call with different parameters causes
         the correct response.
         """
-        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "False")
+
         test_mona_client = self._init_test_client()
         good_message = {"a": "some data"}
 
@@ -187,8 +185,7 @@ class ClientTests(unittest.TestCase):
         Asserts an export() call with wrong parameters causes
         the correct exception when RAISE_EXPORT_EXCEPTIONS = True.
         """
-        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "True")
-        test_mona_client = self._init_test_client()
+        test_mona_client = self._init_test_client(raise_export_exceptions=True)
         mock_request.return_value.ok = False
         mock_request.return_value.json.return_value = {
             "failed": 1,
@@ -216,7 +213,6 @@ class ClientTests(unittest.TestCase):
         :param expected_sent: The mount of events with correct content/structure.
         :param expected_failed: The amount of events with incorrect content/structure.
         """
-        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "False")
         test_mona_client = self._init_test_client()
 
         mock_request.return_value.ok = not (expected_failed > 0)
@@ -230,9 +226,8 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(res["sent"], expected_sent)
         self.assertEqual(res["failed"], expected_failed)
 
-        # Assert export_batch raise an exception when RAISE_EXPORT_EXCEPTIONS is true.
-        self._set_env_var("MONA_SDK_RAISE_EXPORT_EXCEPTIONS", "True")
-        test_mona_client = self._init_test_client()
+        # Assert export_batch raise an exception when raise_export_exceptions is true.
+        test_mona_client = self._init_test_client(raise_export_exceptions=True)
         if expected_failed > 0:
             with self.assertRaises(MonaExportException):
                 test_mona_client.export_batch(events)
