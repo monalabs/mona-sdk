@@ -106,8 +106,9 @@ Mona uses several environment variables you can set as you prefer:
   (default value: 3).
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
-  
-Another easy way to set these variables is to pass them to the client constructor as follows:
+
+Another way to control these behaviors is to pass the relevant arguments to the client 
+constructor as follows (the environment variables are used as defaults for these arguments):
 ```
 my_mona_client = Client(
     api_key,
