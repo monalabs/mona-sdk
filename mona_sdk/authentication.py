@@ -28,7 +28,6 @@ import requests
 from requests.models import Response
 
 from .logger import get_logger
-from .client_util import get_boolean_value_for_env_var
 from .client_exceptions import MonaAuthenticationException
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
@@ -51,24 +50,6 @@ REFRESH_TOKEN_URL = os.environ.get(
 BASIC_HEADER = {"Content-Type": "application/json"}
 TOKEN_EXPIRED_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
-# Number of retries to authenticate in case the authentication server failed to
-# respond.
-NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
-    os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
-)
-
-# Time to wait (in seconds) between retries in case the authentication server failed to
-# respond.
-WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
-    os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
-)
-
-# Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
-# authenticate, every function call will return false.
-# Use client.is_active() in order to check authentication status.
-RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
-)
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -88,31 +69,34 @@ IS_AUTHENTICATED = "isAuthenticated"
 authentication_lock = Lock()
 
 
-def first_authentication(api_key, secret):
+def first_authentication(mona_client):
     # TODO(anat): Support non-authenticated init.
-    if not is_authenticated(api_key):
+    if not is_authenticated(mona_client.api_key):
         # Make sure only one instance of the client (with the given api_key) can get a
         # new token. That token will be shared between all instances that share an
         # api_key.
         with authentication_lock:
             # The inner check is needed to avoid multiple redundant authentications.
-            if not is_authenticated(api_key):
-                response = _request_access_token_with_retries(api_key, secret)
-                API_KEYS_TO_TOKEN_DATA[api_key] = response.json()
+            if not is_authenticated(mona_client.api_key):
+                response = _request_access_token_with_retries(mona_client)
+                API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = response.json()
 
                 # response.ok will be True if authentication was successful and
                 # false if not.
-                _set_api_key_authentication_status(api_key, response.ok)
-                _calculate_and_set_time_to_refresh(api_key)
+                _set_api_key_authentication_status(mona_client.api_key, response.ok)
+                _calculate_and_set_time_to_refresh(mona_client.api_key)
 
     # If the authentication failed, handle error and return false.
-    if not is_authenticated(api_key):
+    if not is_authenticated(mona_client.api_key):
         return _handle_authentications_error(
             f"Mona's client could not authenticate. "
-            f"errors: {_get_error_string_from_token_info(api_key)}"
+            f"errors: {_get_error_string_from_token_info(mona_client.api_key)}",
+            mona_client.raise_authentication_exceptions,
         )
     else:
-        get_logger().info(f"New client token info: {API_KEYS_TO_TOKEN_DATA[api_key]}")
+        get_logger().info(
+            f"New client token info: {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
+        )
         return True
 
 
@@ -121,22 +105,26 @@ def _get_error_string_from_token_info(api_key):
     return ", ".join(_get_token_info_by_api_key(api_key, ERRORS)) if error_list else ""
 
 
-def _request_access_token_with_retries(api_key, secret):
+def _request_access_token_with_retries(mona_client):
     return _get_auth_response_with_retries(
-        lambda: _request_access_token_once(api_key, secret)
+        lambda: _request_access_token_once(mona_client.api_key, mona_client.secret),
+        num_of_retries=mona_client.num_of_retries_for_authentication,
+        auth_wait_time_sec=mona_client.wait_time_for_authentication_retries,
     )
 
 
-def _request_refresh_token_with_retries(refresh_token_key):
+def _request_refresh_token_with_retries(refresh_token_key, mona_client):
     return _get_auth_response_with_retries(
-        lambda: _request_refresh_token_once(refresh_token_key)
+        lambda: _request_refresh_token_once(refresh_token_key),
+        num_of_retries=mona_client.num_of_retries_for_authentication,
+        auth_wait_time_sec=mona_client.wait_time_for_authentication_retries,
     )
 
 
 def _get_auth_response_with_retries(
     response_generator,
-    num_of_retries=NUM_OF_RETRIES_FOR_AUTHENTICATION,
-    auth_wait_time_sec=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
+    num_of_retries,
+    auth_wait_time_sec,
 ):
     """
     Sends an authentication request (first time/refresh) with a retry mechanism.
@@ -255,13 +243,13 @@ def _calculate_and_set_time_to_refresh(api_key):
         )
 
 
-def _handle_authentications_error(error_message):
+def _handle_authentications_error(error_message, should_raise_exception):
     """
     Logs an error and raises MonaAuthenticationException if
     RAISE_AUTHENTICATION_EXCEPTIONS is true, else returns false.
     """
     get_logger().error(error_message)
-    if RAISE_AUTHENTICATION_EXCEPTIONS:
+    if should_raise_exception:
         raise MonaAuthenticationException(error_message)
     return False
 
@@ -276,12 +264,12 @@ def _should_refresh_token(api_key):
     )
 
 
-def _refresh_token(api_key):
+def _refresh_token(mona_client):
     """
     Gets a new token and sets the needed fields.
     """
-    refresh_token_key = _get_token_info_by_api_key(api_key, REFRESH_TOKEN)
-    response = _request_refresh_token_with_retries(refresh_token_key)
+    refresh_token_key = _get_token_info_by_api_key(mona_client.api_key, REFRESH_TOKEN)
+    response = _request_refresh_token_with_retries(refresh_token_key, mona_client)
     authentications_response_info = response.json()
 
     # Log or raise an error in case one occurred.
@@ -289,17 +277,18 @@ def _refresh_token(api_key):
     # the client will try to refresh the token again.
     if not response.ok:
         return _handle_authentications_error(
-            f"Could not refresh token: {response.text}"
+            f"Could not refresh token: {response.text}",
+            mona_client.raise_authentication_exceptions,
         )
 
     # Update the client's new token info.
-    API_KEYS_TO_TOKEN_DATA[api_key] = authentications_response_info
-    _set_api_key_authentication_status(api_key, True)
-    _calculate_and_set_time_to_refresh(api_key)
+    API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = authentications_response_info
+    _set_api_key_authentication_status(mona_client.api_key, True)
+    _calculate_and_set_time_to_refresh(mona_client.api_key)
 
     get_logger().info(
         f"Refreshed access token, the new token info:"
-        f" {API_KEYS_TO_TOKEN_DATA[api_key]}"
+        f" {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
     )
     return True
 
@@ -307,8 +296,7 @@ def _refresh_token(api_key):
 def get_basic_auth_header(api_key):
     return {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer "
-        f"{get_current_token_by_api_key(api_key)}",
+        "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
     }
 
 
@@ -322,18 +310,18 @@ class Decorators(object):
 
         @wraps(decorated)
         def inner(*args, **kwargs):
-            # args[0] is the current client instance.
-            api_key = args[0]._api_key
+            # args[0] is the current mona_client instance.
+            mona_client = args[0]
 
-            if not is_authenticated(api_key):
+            if not is_authenticated(mona_client.api_key):
                 get_logger().warn("Mona's client is not authenticated")
                 return False
 
-            if _should_refresh_token(api_key):
+            if _should_refresh_token(mona_client.api_key):
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
-                    if _should_refresh_token(api_key):
-                        did_refresh_token = _refresh_token(api_key)
+                    if _should_refresh_token(mona_client.api_key):
+                        did_refresh_token = _refresh_token(mona_client)
                         if not did_refresh_token:
                             # TODO(anat): Check if the current token is still valid to
                             #   call the function anyway.

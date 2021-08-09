@@ -23,28 +23,27 @@ from .logger import get_logger
 from .client_util import is_dict_contains_fields, get_boolean_value_for_env_var
 from .client_exceptions import MonaExportException
 
-RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
-)
 
-
-def mona_messages_to_dicts_validation(events):
+def mona_messages_to_dicts_validation(events, raise_export_exceptions):
     try:
         # Get all MonsSingleMessage as dicts.
         events = [message.get_dict() for message in events]
     except TypeError:
         return handle_export_error(
-            "export_batch must get an iterable of MonaSingleMessage."
+            "export_batch must get an iterable of MonaSingleMessage.",
+            raise_export_exceptions,
         )
     except AttributeError:
         return handle_export_error(
-            "Messages exported to Mona must be MonaSingleMessage."
+            "Messages exported to Mona must be MonaSingleMessage.",
+            raise_export_exceptions,
         )
 
     # Validate that the batch is json serializable.
     if not _is_json_serializable(events):
         return handle_export_error(
-            "All fields in MonaSingleMessage must be JSON serializable."
+            "All fields in MonaSingleMessage must be JSON serializable.",
+            raise_export_exceptions
         )
 
     return events
@@ -62,13 +61,14 @@ def _is_json_serializable(message):
     return True
 
 
-def validate_mona_single_message(message_event):
+def validate_mona_single_message(message_event, raise_export_exceptions):
     # Check that message_event contains all required fields.
     required_fields = ("message", "contextClass")
 
     if not is_dict_contains_fields(message_event, required_fields):
         return handle_export_error(
-            "Messages to export must be of MonaSingleMessage type."
+            "Messages to export must be of MonaSingleMessage type.",
+            raise_export_exceptions,
         )
 
     return True
@@ -97,12 +97,12 @@ def validate_inner_message_type(message):
     return True
 
 
-def handle_export_error(error_message):
+def handle_export_error(error_message, should_raise_exception):
     """
     Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
     else returns false.
     """
     get_logger().error(error_message)
-    if RAISE_EXPORT_EXCEPTIONS:
+    if should_raise_exception:
         raise MonaExportException(error_message)
     return False
