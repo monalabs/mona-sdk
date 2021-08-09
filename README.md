@@ -138,7 +138,7 @@ and then setting handlers and formatters as you please.
 
 You can also configure Mona's logging using the following environment variables:
 
-1. MONA_LOGGING_LEVEL - set this to the wanted level, according to python's logging
+1. MONA_SDK_LOGGING_LEVEL - set this to the wanted level, according to python's logging
    constants:
    - "CRITICAL" (50)
    - "ERROR" (40)
@@ -147,7 +147,7 @@ You can also configure Mona's logging using the following environment variables:
    - "DEBUG" (10)
    - "NOTSET" (0)
     
-2. MONA_LOGGER_NAME - you can change Mona's logger name. 
+2. MONA_SDK_LOGGER_NAME - you can change Mona's logger name. 
 
 
 ## Special field names
