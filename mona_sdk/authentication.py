@@ -35,7 +35,7 @@ from .client_exceptions import MonaAuthenticationException
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
 # the client will automatically refresh the token to a new one).
 REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
-    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 122))
+    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 12))
 )
 
 AUTH_API_TOKEN_URL = os.environ.get(
@@ -176,7 +176,7 @@ def _request_refresh_token_once(refresh_token_key):
     """
     return requests.request(
         "POST",
-        "REFRESH_TOKEN_URL",
+        REFRESH_TOKEN_URL,
         headers=BASIC_HEADER,
         json={"refreshToken": refresh_token_key},
     )
