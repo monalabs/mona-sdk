@@ -5,12 +5,12 @@ import os
 import logging
 from threading import Lock
 
-LOGGER_NAME = os.environ.get("MONA_LOGGER_NAME", "mona-logger")
+LOGGER_NAME = os.environ.get("MONA_SDK_LOGGER_NAME", "mona-logger")
 
 # Possible logging level string values: CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET.
 # When MONA_LOGGING_LEVEL is not provided (or holds an unknown value), logger will be
 # off.
-LOGGING_LEVEL = os.environ.get("MONA_LOGGING_LEVEL")
+LOGGING_LEVEL = os.environ.get("MONA_SDK_LOGGING_LEVEL")
 
 logger = None
 logger_lock = Lock()

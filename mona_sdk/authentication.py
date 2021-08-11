@@ -243,12 +243,16 @@ def _calculate_and_set_time_to_refresh(api_key):
         )
 
 
-def _handle_authentications_error(error_message, should_raise_exception):
+def _handle_authentications_error(
+    error_message, should_raise_exception, message_to_log=None
+):
     """
     Logs an error and raises MonaAuthenticationException if
     RAISE_AUTHENTICATION_EXCEPTIONS is true, else returns false.
     """
     get_logger().error(error_message)
+    if message_to_log:
+        get_logger().error(f"Failed to send the following to mona: {message_to_log}")
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)
     return False
@@ -272,25 +276,19 @@ def _refresh_token(mona_client):
     response = _request_refresh_token_with_retries(refresh_token_key, mona_client)
     authentications_response_info = response.json()
 
-    # Log or raise an error in case one occurred.
-    # The current client token info will not change so that on the next function call
-    # the client will try to refresh the token again.
-    if not response.ok:
-        return _handle_authentications_error(
-            f"Could not refresh token: {response.text}",
-            mona_client.raise_authentication_exceptions,
+    # The current client token info will not change if the response was bad, so that on
+    # the next function call the client will try to refresh the token again.
+    if response.ok:
+        # Update the client's new token info.
+        API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = authentications_response_info
+        _set_api_key_authentication_status(mona_client.api_key, True)
+        _calculate_and_set_time_to_refresh(mona_client.api_key)
+
+        get_logger().info(
+            f"Refreshed access token, the new token info:"
+            f" {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
         )
-
-    # Update the client's new token info.
-    API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = authentications_response_info
-    _set_api_key_authentication_status(mona_client.api_key, True)
-    _calculate_and_set_time_to_refresh(mona_client.api_key)
-
-    get_logger().info(
-        f"Refreshed access token, the new token info:"
-        f" {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
-    )
-    return True
+    return response
 
 
 def get_basic_auth_header(api_key):
@@ -313,19 +311,35 @@ class Decorators(object):
             # args[0] is the current mona_client instance.
             mona_client = args[0]
 
+            # If len(args) < 1, the wrapped function does not have args to log (neither
+            # messages nor config)
+            should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
+
+            # message_to_log is the the messages/config that should be logged in case of
+            # an authentication failure.
+            message_to_log = args[1] if should_log_args else None
+
             if not is_authenticated(mona_client.api_key):
-                get_logger().warn("Mona's client is not authenticated")
-                return False
+                return _handle_authentications_error(
+                    "Mona's client is not authenticated",
+                    mona_client.raise_authentication_exceptions,
+                    message_to_log,
+                )
 
             if _should_refresh_token(mona_client.api_key):
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
                     if _should_refresh_token(mona_client.api_key):
-                        did_refresh_token = _refresh_token(mona_client)
-                        if not did_refresh_token:
+                        refresh_token_response = _refresh_token(mona_client)
+                        if not refresh_token_response.ok:
                             # TODO(anat): Check if the current token is still valid to
                             #   call the function anyway.
-                            return False
+                            return _handle_authentications_error(
+                                f"Could not refresh token: "
+                                f"{refresh_token_response.text}",
+                                mona_client.raise_authentication_exceptions,
+                                message_to_log,
+                            )
             return decorated(*args, **kwargs)
 
         return inner

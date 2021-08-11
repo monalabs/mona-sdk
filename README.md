@@ -1,5 +1,7 @@
 # Mona Python SDK
-![Mona logo](https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true)
+<p align="center">
+  <img src="https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true" alt="Mona's logo" width="220"/>
+</p>
 
 
 Mona’s SDK is a python based package which enables you to securely access 
@@ -106,6 +108,7 @@ Mona uses several environment variables you can set as you prefer:
   (default value: 3).
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
+- MONA_SDK_SHOULD_LOG_FAILED_MESSAGES - When true, failed messages will be logged ("ERROR" level).
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments):
@@ -118,6 +121,7 @@ my_mona_client = Client(
     raise_config_exceptions=True,
     num_of_retries_for_authentication=6,
     wait_time_for_authentication_retries=0,
+    should_log_failed_messages=True,
 )
 ```
 
@@ -136,7 +140,7 @@ and then setting handlers and formatters as you please.
 
 You can also configure Mona's logging using the following environment variables:
 
-1. MONA_LOGGING_LEVEL - set this to the wanted level, according to python's logging
+1. MONA_SDK_LOGGING_LEVEL - set this to the wanted level, according to python's logging
    constants:
    - "CRITICAL" (50)
    - "ERROR" (40)
@@ -145,7 +149,7 @@ You can also configure Mona's logging using the following environment variables:
    - "DEBUG" (10)
    - "NOTSET" (0)
     
-2. MONA_LOGGER_NAME - you can change Mona's logger name. 
+2. MONA_SDK_LOGGER_NAME - you can change Mona's logger name. 
 
 
 ## Special field names

@@ -24,29 +24,34 @@ from .client_util import is_dict_contains_fields, get_boolean_value_for_env_var
 from .client_exceptions import MonaExportException
 
 
-def mona_messages_to_dicts_validation(events, raise_export_exceptions):
+def mona_messages_to_dicts_validation(
+    events, raise_export_exceptions, log_failed_messages
+):
     try:
         # Get all MonsSingleMessage as dicts.
-        events = [message.get_dict() for message in events]
+        dict_events = [message.get_dict() for message in events]
     except TypeError:
         return handle_export_error(
             "export_batch must get an iterable of MonaSingleMessage.",
             raise_export_exceptions,
+            events if log_failed_messages else None,
         )
     except AttributeError:
         return handle_export_error(
             "Messages exported to Mona must be MonaSingleMessage.",
             raise_export_exceptions,
+            events if log_failed_messages else None,
         )
 
     # Validate that the batch is json serializable.
-    if not _is_json_serializable(events):
+    if not _is_json_serializable(dict_events):
         return handle_export_error(
             "All fields in MonaSingleMessage must be JSON serializable.",
-            raise_export_exceptions
+            raise_export_exceptions,
+            events if log_failed_messages else None,
         )
 
-    return events
+    return dict_events
 
 
 def _is_json_serializable(message):
@@ -61,17 +66,11 @@ def _is_json_serializable(message):
     return True
 
 
-def validate_mona_single_message(message_event, raise_export_exceptions):
+def validate_mona_single_message(message_event):
     # Check that message_event contains all required fields.
     required_fields = ("message", "contextClass")
 
-    if not is_dict_contains_fields(message_event, required_fields):
-        return handle_export_error(
-            "Messages to export must be of MonaSingleMessage type.",
-            raise_export_exceptions,
-        )
-
-    return True
+    return is_dict_contains_fields(message_event, required_fields)
 
 
 def update_mona_fields_names(message):
@@ -97,12 +96,16 @@ def validate_inner_message_type(message):
     return True
 
 
-def handle_export_error(error_message, should_raise_exception):
+def handle_export_error(error_message, should_raise_exception, failed_message):
     """
     Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
     else returns false.
     """
     get_logger().error(error_message)
+    if failed_message:
+        get_logger().error(
+            f"Failed to send the following to mona: {failed_message}"
+        )
     if should_raise_exception:
         raise MonaExportException(error_message)
     return False
