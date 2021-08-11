@@ -121,6 +121,7 @@ my_mona_client = Client(
     raise_config_exceptions=True,
     num_of_retries_for_authentication=6,
     wait_time_for_authentication_retries=0,
+    should_log_failed_messages=True,
 )
 ```
 
