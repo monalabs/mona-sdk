@@ -5,8 +5,8 @@ import os
 import logging
 from threading import Lock
 
-# At the moment "MONA_" prefix on logger anv vars is still supported. this will be
-# deprecated in the future and only "MONA_SDK_" prefix will be accepted.
+# "MONA_" prefix for logger environment variables is deprecated and soon only
+# "MONA_SDK_" prefix will be accepted.
 LOGGER_NAME = os.environ.get(
     "MONA_SDK_LOGGER_NAME", os.environ.get("MONA_LOGGER_NAME", "mona-logger")
 )
