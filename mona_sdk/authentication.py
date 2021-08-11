@@ -313,15 +313,14 @@ class Decorators(object):
 
             # If len(args) < 1, the wrapped function does not have args to log (neither
             # messages nor config)
-            should_log_args = len(args) > 1 and mona_client.save_failed_messages_logs
+            should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
 
             if not is_authenticated(mona_client.api_key):
-                get_logger().warn("Mona's client is not authenticated")
-                if should_log_args:
-                    get_logger().error(
-                        f"Failed to send the following to mona: {args[1]}"
-                    )
-                return False
+                return _handle_authentications_error(
+                    "Mona's client is not authenticated",
+                    mona_client.raise_authentication_exceptions,
+                    args[1] if should_log_args else None,
+                )
 
             if _should_refresh_token(mona_client.api_key):
                 with authentication_lock:

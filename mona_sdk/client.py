@@ -69,8 +69,8 @@ WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
 
 # When this variable is True, failed messages (for any reason) will be logged at "Error"
 # level.
-SAVE_FAILED_MESSAGES_LOGS = get_boolean_value_for_env_var(
-    "MONA_SDK_SAVE_FAILED_MESSAGES_LOGS", False
+SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
+    "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
@@ -138,7 +138,7 @@ class Client:
         raise_config_exceptions=RAISE_CONFIG_EXCEPTIONS,
         num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
-        save_failed_messages_logs=SAVE_FAILED_MESSAGES_LOGS,
+        should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -155,7 +155,7 @@ class Client:
         self.raise_config_exceptions = raise_config_exceptions
         self.num_of_retries_for_authentication = num_of_retries_for_authentication
         self.wait_time_for_authentication_retries = wait_time_for_authentication_retries
-        self.save_failed_messages_logs = save_failed_messages_logs
+        self.should_log_failed_messages = should_log_failed_messages
 
         could_authenticate = first_authentication(self)
         if not could_authenticate:
@@ -220,7 +220,7 @@ class Client:
 
     def _export_batch_inner(self, events: List[MonaSingleMessage]):
         events = mona_messages_to_dicts_validation(
-            events, self.raise_export_exceptions, self.save_failed_messages_logs
+            events, self.raise_export_exceptions, self.should_log_failed_messages
         )
         if not events:
             return False
@@ -231,7 +231,7 @@ class Client:
                 return handle_export_error(
                     "Messages to export must be of MonaSingleMessage type.",
                     self.raise_export_exceptions,
-                    events if self.save_failed_messages_logs else None,
+                    events if self.should_log_failed_messages else None,
                 )
 
             message_copy = dict(message_event)
@@ -256,7 +256,7 @@ class Client:
             return handle_export_error(
                 "Cannot connect to rest-api",
                 self.raise_export_exceptions,
-                events if self.save_failed_messages_logs else None,
+                events if self.should_log_failed_messages else None,
             )
 
         # Create the response and return it.
@@ -268,7 +268,7 @@ class Client:
             handle_export_error(
                 f"Some messages didn't pass validation: {client_response}",
                 self.raise_export_exceptions,
-                events if self.save_failed_messages_logs else None,
+                events if self.should_log_failed_messages else None,
             )
         else:
             self._logger.info(
