@@ -315,11 +315,15 @@ class Decorators(object):
             # messages nor config)
             should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
 
+            # arg_to_log is the the messages/config that should be logged in case of an
+            # authentication failure.
+            arg_to_log = args[1] if should_log_args else None
+
             if not is_authenticated(mona_client.api_key):
                 return _handle_authentications_error(
                     "Mona's client is not authenticated",
                     mona_client.raise_authentication_exceptions,
-                    args[1] if should_log_args else None,
+                    arg_to_log,
                 )
 
             if _should_refresh_token(mona_client.api_key):
@@ -334,7 +338,7 @@ class Decorators(object):
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
                                 mona_client.raise_authentication_exceptions,
-                                args[1] if should_log_args else None,
+                                arg_to_log,
                             )
             return decorated(*args, **kwargs)
 
