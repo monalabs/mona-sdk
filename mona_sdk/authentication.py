@@ -274,6 +274,10 @@ def _refresh_token(mona_client):
     """
     refresh_token_key = _get_token_info_by_api_key(mona_client.api_key, REFRESH_TOKEN)
     response = _request_refresh_token_with_retries(refresh_token_key, mona_client)
+
+    if not response.ok:
+        response = _request_access_token_with_retries(mona_client)
+
     authentications_response_info = response.json()
 
     # The current client token info will not change if the response was bad, so that on
