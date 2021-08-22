@@ -175,7 +175,7 @@ class Client:
             self._rest_api_url = (
                 f"https://incoming{self._user_id}.monalabs.io/monaExport"
             )
-            self._app_server_url = f"http://127.0.0.1:5000/"
+            self._app_server_url = f"https://api{self._user_id}.monalabs.io"
             return
 
         self.raise_authentication_exceptions = raise_authentication_exceptions
