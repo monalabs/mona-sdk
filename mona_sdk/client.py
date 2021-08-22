@@ -22,7 +22,10 @@ import jwt
 import requests
 from requests.exceptions import ConnectionError
 
-from mona_sdk.client_exceptions import MonaConfigUploadException
+from mona_sdk.client_exceptions import (
+    MonaConfigUploadException,
+    MonaInitializationException,
+)
 from .client_util import get_boolean_value_for_env_var
 from .logger import get_logger
 from .validation import (
@@ -53,6 +56,10 @@ RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
 
 RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
+)
+
+SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
+    "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
 )
 
 # Number of retries to authenticate in case the authentication server failed to
@@ -131,14 +138,16 @@ class Client:
 
     def __init__(
         self,
-        api_key,
-        secret,
+        api_key=None,
+        secret=None,
         raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
         raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
         raise_config_exceptions=RAISE_CONFIG_EXCEPTIONS,
         num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
+        should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        user_id=None,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -147,15 +156,31 @@ class Client:
         :param secret: The secret corresponding to the given api_key.
         """
         self._logger = get_logger()
+
         self.api_key = api_key
         self.secret = secret
 
-        self.raise_authentication_exceptions = raise_authentication_exceptions
         self.raise_export_exceptions = raise_export_exceptions
         self.raise_config_exceptions = raise_config_exceptions
+        self.should_log_failed_messages = should_log_failed_messages
+        self.should_use_authentication = should_use_authentication
+
+        if not should_use_authentication:
+            if not user_id:
+                raise MonaInitializationException(
+                    "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must"
+                    " be provided."
+                )
+            self._user_id = user_id
+            self._rest_api_url = (
+                f"https://incoming{self._user_id}.monalabs.io/monaExport"
+            )
+            self._app_server_url = f"http://127.0.0.1:5000/"
+            return
+
+        self.raise_authentication_exceptions = raise_authentication_exceptions
         self.num_of_retries_for_authentication = num_of_retries_for_authentication
         self.wait_time_for_authentication_retries = wait_time_for_authentication_retries
-        self.should_log_failed_messages = should_log_failed_messages
 
         could_authenticate = first_authentication(self)
         if not could_authenticate:
@@ -174,7 +199,9 @@ class Client:
         Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
         is set to False.
         """
-        return is_authenticated(self.api_key)
+        return (
+            is_authenticated(self.api_key) if self.should_use_authentication else True
+        )
 
     def _get_user_id(self):
         """
@@ -285,7 +312,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_basic_auth_header(self.api_key),
+            headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
             json={"userId": self._user_id, "messages": messages},
         )
 
@@ -323,7 +350,7 @@ class Client:
         }
 
     @Decorators.refresh_token_if_needed
-    def upload_config(self, config, commit_message):
+    def upload_config(self, config, commit_message, author):
         """
         Uploads a new configuration, as a json-serializable dict.
         The configuration file enables you to define how the exported data should be
@@ -334,6 +361,7 @@ class Client:
         :param config: (dict) your configuration, no need for your tenant id as key,
         first layer of keys should be the context classes.
         :param commit_message: (str)
+        :param author: (str)
         :return: A dict holding the upload data:
         {
             "success": <was the upload successful>, (bool)
@@ -342,7 +370,7 @@ class Client:
         """
         config_to_upload = {
             "config": {self._user_id: config},
-            "author": self.api_key,
+            "author": author,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
@@ -350,7 +378,9 @@ class Client:
         try:
             upload_response = requests.post(
                 f"{self._app_server_url}/upload_config",
-                headers=get_basic_auth_header(self.api_key),
+                headers=get_basic_auth_header(
+                    self.api_key, self.should_use_authentication
+                ),
                 json=config_to_upload,
             )
             response_data = upload_response.json()["response_data"]
@@ -378,7 +408,9 @@ class Client:
         try:
             config_response = requests.post(
                 f"{self._app_server_url}/configs",
-                headers=get_basic_auth_header(self.api_key),
+                headers=get_basic_auth_header(
+                    self.api_key, self.should_use_authentication
+                ),
                 data="{}",
             )
             config_data = config_response.json()

@@ -299,11 +299,17 @@ def _refresh_token(mona_client):
     return response
 
 
-def get_basic_auth_header(api_key):
-    return {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
-    }
+def get_basic_auth_header(api_key, with_auth):
+    return (
+        {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
+        }
+        if with_auth
+        else {
+            "Content-Type": "application/json",
+        }
+    )
 
 
 class Decorators(object):
@@ -318,6 +324,9 @@ class Decorators(object):
         def inner(*args, **kwargs):
             # args[0] is the current mona_client instance.
             mona_client = args[0]
+
+            if not mona_client.should_use_authentication:
+                return decorated(*args, **kwargs)
 
             # If len(args) < 1, the wrapped function does not have args to log (neither
             # messages nor config)
