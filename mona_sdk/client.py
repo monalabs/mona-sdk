@@ -382,7 +382,7 @@ class Client:
         :param config: (dict) your configuration, no need for your tenant id as key,
         first layer of keys should be the context classes.
         :param commit_message: (str)
-        :param author: (str)
+        :param author: (str) provide this field if you are using unauthenticated mode.
         :return: A dict holding the upload data:
         {
             "success": <was the upload successful>, (bool)

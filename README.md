@@ -77,7 +77,7 @@ Mona's sdk provides a simple way to upload a new Mona configuration, using Clien
 ```
 # Note: no need to add your user_id as the key, just the configuration itself.
 new_configuration = <Your new Mona configuration>
-author = <Who is uploding the new configuration>
+author = <Who is uploding the new configuration> # provide this field if you are using unauthenticated mode.
 upload_result = my_client.upload_config(new_configuration, "My commit message", author)
 
 # the return value format will be:

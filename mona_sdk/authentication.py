@@ -70,7 +70,6 @@ authentication_lock = Lock()
 
 
 def first_authentication(mona_client):
-    # TODO(anat): Support non-authenticated init.
     if not is_authenticated(mona_client.api_key):
         # Make sure only one instance of the client (with the given api_key) can get a
         # new token. That token will be shared between all instances that share an
