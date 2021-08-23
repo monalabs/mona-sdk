@@ -62,6 +62,8 @@ SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
 )
 
+SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
+
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
 NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
@@ -85,6 +87,11 @@ UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
 )
 APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
+
+UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
+    "\nIf you set should_use_authentication to False on purpose, please make sure to "
+    "update Mona's team."
+)
 
 
 @dataclass
@@ -146,6 +153,7 @@ class Client:
         num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
+        should_use_ssl=SHOULD_USE_SSL,
         should_use_authentication=SHOULD_USE_AUTHENTICATION,
         user_id=None,
     ):
@@ -155,6 +163,12 @@ class Client:
         :param api_key: An api key provided to you by Mona.
         :param secret: The secret corresponding to the given api_key.
         """
+        if not should_use_authentication and not user_id:
+            raise MonaInitializationException(
+                "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must be "
+                "provided."
+            )
+
         self._logger = get_logger()
 
         self.api_key = api_key
@@ -163,33 +177,39 @@ class Client:
         self.raise_export_exceptions = raise_export_exceptions
         self.raise_config_exceptions = raise_config_exceptions
         self.should_log_failed_messages = should_log_failed_messages
+        self.should_use_ssl = should_use_ssl
         self.should_use_authentication = should_use_authentication
 
-        if not should_use_authentication:
-            if not user_id:
-                raise MonaInitializationException(
-                    "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must"
-                    " be provided."
-                )
-            self._user_id = user_id
-            self._rest_api_url = (
-                f"https://incoming{self._user_id}.monalabs.io/monaExport"
+        if should_use_authentication:
+            self.raise_authentication_exceptions = raise_authentication_exceptions
+            self.num_of_retries_for_authentication = num_of_retries_for_authentication
+            self.wait_time_for_authentication_retries = (
+                wait_time_for_authentication_retries
             )
-            self._app_server_url = f"https://api{self._user_id}.monalabs.io"
-            return
 
-        self.raise_authentication_exceptions = raise_authentication_exceptions
-        self.num_of_retries_for_authentication = num_of_retries_for_authentication
-        self.wait_time_for_authentication_retries = wait_time_for_authentication_retries
+            could_authenticate = first_authentication(self)
+            if not could_authenticate:
+                return
 
-        could_authenticate = first_authentication(self)
-        if not could_authenticate:
-            return
+        # If user_id=None then should_use_authentication must be True, which means at
+        # this point the client was successfully authenticated and self._get_user_id()
+        # will work.
+        self._user_id = user_id or self._get_user_id()
+        self._rest_api_url = self._get_rest_api_url()
+        self._app_server_url = self._get_app_server_url()
 
-        # Update user's mona url for future requests.
-        self._user_id = self._get_user_id()
-        self._rest_api_url = f"https://incoming{self._user_id}.monalabs.io/export"
-        self._app_server_url = f"https://api{self._user_id}.monalabs.io"
+    def _get_rest_api_url(self):
+        return (
+            f"http{'s' if self.should_use_ssl else ''}://incoming{self._user_id}"
+            f".monalabs.io/"
+            f"{'export' if self.should_use_authentication else 'monaExport'}"
+        )
+
+    def _get_app_server_url(self):
+        return (
+            f"http{'s' if self.should_use_ssl else ''}://api{self._user_id}-staging"
+            f".monalabs.io"
+        )
 
     def is_active(self):
         """
@@ -293,7 +313,8 @@ class Client:
         )
         if client_response["failed"] > 0:
             handle_export_error(
-                f"Some messages didn't pass validation: {client_response}",
+                f"Some messages didn't pass validation: {client_response}."
+                f"{self._get_unauthenticated_mode_error_message()}",
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
@@ -350,7 +371,7 @@ class Client:
         }
 
     @Decorators.refresh_token_if_needed
-    def upload_config(self, config, commit_message, author):
+    def upload_config(self, config, commit_message, author=None):
         """
         Uploads a new configuration, as a json-serializable dict.
         The configuration file enables you to define how the exported data should be
@@ -368,9 +389,13 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
+        if not author and not self.should_use_authentication:
+            self._handle_config_error(
+                "when using non authenticated client, author must be provided"
+            )
         config_to_upload = {
             "config": {self._user_id: config},
-            "author": author,
+            "author": author or self.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
@@ -429,7 +454,21 @@ class Client:
         Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
         else returns false.
         """
+        error_message += self._get_unauthenticated_mode_error_message()
+
         self._logger.error(error_message)
         if self.raise_config_exceptions:
             raise MonaConfigUploadException(error_message)
         return False
+
+    def _get_unauthenticated_mode_error_message(self):
+        """
+        If should_use_authentication=True return an error message (suggesting
+        should_use_authentication mode turned on might be the cause for the exception)
+        and an empty string otherwise.
+        """
+        return (
+            ""
+            if self.should_use_authentication
+            else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
+        )

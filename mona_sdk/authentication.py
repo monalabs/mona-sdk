@@ -306,9 +306,7 @@ def get_basic_auth_header(api_key, with_auth):
             "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
         }
         if with_auth
-        else {
-            "Content-Type": "application/json",
-        }
+        else BASIC_HEADER
     )
 
 
