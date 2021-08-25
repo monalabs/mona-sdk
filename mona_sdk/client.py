@@ -89,8 +89,8 @@ UPLOAD_CONFIG_ERROR_MESSAGE = (
 APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
 
 UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
-    "\nIf you set should_use_authentication to False on purpose, please make sure to "
-    "update Mona's team."
+    "\nNotice that should_use_authentication is set to False, which is not supported by"
+    " default and must be explicitly requested from Mona team."
 )
 
 
@@ -189,6 +189,8 @@ class Client:
 
             could_authenticate = first_authentication(self)
             if not could_authenticate:
+                # TODO(anat): consider replacing this return with an if statement for
+                #  the next part.
                 return
 
         # If user_id=None then should_use_authentication must be True, which means at
@@ -199,17 +201,13 @@ class Client:
         self._app_server_url = self._get_app_server_url()
 
     def _get_rest_api_url(self):
-        return (
-            f"http{'s' if self.should_use_ssl else ''}://incoming{self._user_id}"
-            f".monalabs.io/"
-            f"{'export' if self.should_use_authentication else 'monaExport'}"
-        )
+        http_protocol = "https" if self.should_use_ssl else "http"
+        endpoint_name = "export" if self.should_use_authentication else "monaExport"
+        return f"{http_protocol}://incoming{self._user_id}.monalabs.io/{endpoint_name}"
 
     def _get_app_server_url(self):
-        return (
-            f"http{'s' if self.should_use_ssl else ''}://api{self._user_id}-staging"
-            f".monalabs.io"
-        )
+        http_protocol = "https" if self.should_use_ssl else "http"
+        return f"{http_protocol}://api{self._user_id}.monalabs.io"
 
     def is_active(self):
         """
@@ -463,8 +461,8 @@ class Client:
 
     def _get_unauthenticated_mode_error_message(self):
         """
-        If should_use_authentication=True return an error message (suggesting
-        should_use_authentication mode turned on might be the cause for the exception)
+        If should_use_authentication=False return an error message (suggesting
+        should_use_authentication mode turned off might be the cause for the exception)
         and an empty string otherwise.
         """
         return (
