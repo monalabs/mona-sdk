@@ -13,3 +13,7 @@ class MonaAuthenticationException(Exception):
 
 class MonaConfigUploadException(Exception):
     pass
+
+
+class MonaInitializationException(Exception):
+    pass
