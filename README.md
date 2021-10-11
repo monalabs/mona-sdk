@@ -110,6 +110,10 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
 - MONA_SDK_SHOULD_LOG_FAILED_MESSAGES - When true, failed messages will be logged ("ERROR" level).
+- MONA_SDK_OVERRIDE_REST_API_URL- When provided, all messages to mona's rest-api will use this address instead of the default 
+  one.
+- MONA_SDK_OVERRIDE_APP_SERVER_URL When provided, all configuration related calls to mona's servers will use this address instead
+  of the default one.
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments):
