@@ -64,6 +64,10 @@ SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
+APP_SERVER_URL = os.environ.get("MONA_SDK_APP_SERVER_URL")
+
+REST_API_URL = os.environ.get("MONA_SDK_REST_API_URL")
+
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
 NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
@@ -155,6 +159,8 @@ class Client:
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
         should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        rest_api_url=REST_API_URL,
+        app_server_url=APP_SERVER_URL,
         user_id=None,
     ):
         """
@@ -197,8 +203,8 @@ class Client:
         # this point the client was successfully authenticated and self._get_user_id()
         # will work.
         self._user_id = user_id or self._get_user_id()
-        self._rest_api_url = self._get_rest_api_url()
-        self._app_server_url = self._get_app_server_url()
+        self._rest_api_url = rest_api_url or self._get_rest_api_url()
+        self._app_server_url = app_server_url or self._get_app_server_url()
 
     def _get_rest_api_url(self):
         http_protocol = "https" if self.should_use_ssl else "http"
