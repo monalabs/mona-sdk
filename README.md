@@ -73,8 +73,8 @@ for context_instance in my_data:
 export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
 ### Configuration handling
-Mona's sdk provides simple ways to upload a new Mona configuration and download your current mona configuration, or a 
-new suggested configuration based on your data.
+Mona's sdk provides simple ways to upload a new Mona configuration, download your current mona configuration, or 
+download a new suggested configuration based on your data.
 
 - Upload a new configuration:
     ```
