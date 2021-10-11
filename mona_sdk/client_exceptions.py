@@ -11,7 +11,7 @@ class MonaAuthenticationException(Exception):
     pass
 
 
-class MonaConfigUploadException(Exception):
+class MonaConfigException(Exception):
     pass
 
 

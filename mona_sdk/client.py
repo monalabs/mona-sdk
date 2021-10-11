@@ -23,7 +23,7 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import (
-    MonaConfigUploadException,
+    MonaConfigException,
     MonaInitializationException,
 )
 from .client_util import get_boolean_value_for_env_var
@@ -449,14 +449,14 @@ class Client:
 
     def _handle_config_error(self, error_message):
         """
-        Logs an error and raises MonaExportException if RAISE_EXPORT_EXCEPTIONS is true,
+        Logs an error and raises MonaConfigException if RAISE_CONFIG_EXCEPTIONS is true,
         else returns false.
         """
         error_message += self._get_unauthenticated_mode_error_message()
 
         self._logger.error(error_message)
         if self.raise_config_exceptions:
-            raise MonaConfigUploadException(error_message)
+            raise MonaConfigException(error_message)
         return False
 
     def _get_unauthenticated_mode_error_message(self):
@@ -470,3 +470,26 @@ class Client:
             if self.should_use_authentication
             else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
         )
+
+    def get_suggested_config(self):
+        """
+        :return: A json-serializable dict with the current defined configuration.
+        """
+        try:
+            config_response = requests.post(
+                f"{self._app_server_url}/get_new_config_fields",
+                headers=get_basic_auth_header(
+                    self.api_key, self.should_use_authentication
+                ),
+                data="{}",
+            )
+            new_config_data = config_response.json()
+            if not config_response.ok:
+                return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+
+        except ConnectionError:
+            return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+        except JSONDecodeError:
+            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+
+        return new_config_data["response_data"]["suggested_config"]
