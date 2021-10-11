@@ -72,24 +72,31 @@ for context_instance in my_data:
         
 export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
-### Uploading a new configuration
-Mona's sdk provides a simple way to upload a new Mona configuration, using Client.upload_config():
-```
-# Note: no need to add your user_id as the key, just the configuration itself.
-new_configuration = <Your new Mona configuration>
-author = <Who is uploding the new configuration> # provide this field if you are using unauthenticated mode.
-upload_result = my_client.upload_config(new_configuration, "My commit message", author)
+### Configuration handling
+Mona's sdk provides simple ways to upload a new Mona configuration and download your current mona configuration, or a 
+new suggested configuration based on your data.
 
-# the return value format will be:
-# upload_result == {
-#    "success": <was the upload successful>, (bool)
-#    "new_config_id": <the new configuration ID> (str)
-#}
-```
-You can also receive your current Mona configuration:
-```
-my_current_mona_config = my_client.get_config()
-```
+- Upload a new configuration:
+    ```
+    # Note: no need to add your user_id as the key, just the configuration itself.
+    new_configuration = <Your new Mona configuration>
+    author = <Who is uploding the new configuration> # provide this field if you are using unauthenticated mode.
+    upload_result = my_client.upload_config(new_configuration, "My commit message", author)
+    
+    # the return value format will be:
+    # upload_result == {
+    #    "success": <was the upload successful>, (bool)
+    #    "new_config_id": <the new configuration ID> (str)
+    #}
+    ```
+- Get your current Mona configuration:
+    ```
+    my_current_mona_config = my_client.get_config()
+    ```
+- Get a suggested configuration based on your data:
+    ```
+    my_suggested_mona_config = my_client.get_suggested_config()
+    ```
 
 ## Environment variables
 
