@@ -473,7 +473,7 @@ class Client:
 
     def get_suggested_config(self):
         """
-        :return: A json-serializable dict with the current defined configuration.
+        :return: A json-serializable dict with a suggested configuration.
         """
         try:
             config_response = requests.post(
