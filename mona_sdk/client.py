@@ -434,24 +434,26 @@ class Client:
         """
         :return: A json-serializable dict with the current defined configuration.
         """
+        app_server_response = self._app_server_request("configs")
         try:
-            config_response = requests.post(
-                f"{self._app_server_url}/configs",
-                headers=get_basic_auth_header(
-                    self.api_key, self.should_use_authentication
-                ),
-                data="{}",
-            )
-            config_data = config_response.json()
-            if not config_response.ok:
-                return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
-
-        except ConnectionError:
-            return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
-        except JSONDecodeError:
+            return {
+                self._user_id: app_server_response["response_data"][
+                    "raw_configuration_data"
+                ]
+            }
+        except KeyError:
             return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
-        return {self._user_id: config_data["response_data"]["raw_configuration_data"]}
+    @Decorators.refresh_token_if_needed
+    def get_suggested_config(self):
+        """
+        :return: A json-serializable dict with a suggested configuration.
+        """
+        app_server_response = self._app_server_request("get_new_config_fields")
+        try:
+            return app_server_response["response_data"]["suggested_config"]
+        except KeyError:
+            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
 
     def _handle_config_error(self, error_message):
         """
@@ -477,25 +479,25 @@ class Client:
             else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
         )
 
-    def get_suggested_config(self):
+    def _app_server_request(self, endpoint_name, data="{}"):
         """
-        :return: A json-serializable dict with a suggested configuration.
+        Send a request to Mona's app-server
         """
         try:
             config_response = requests.post(
-                f"{self._app_server_url}/get_new_config_fields",
+                f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
-                data="{}",
+                data=data,
             )
-            new_config_data = config_response.json()
+            json_response = config_response.json()
             if not config_response.ok:
                 return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+
+            return json_response
 
         except ConnectionError:
             return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
         except JSONDecodeError:
             return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
-
-        return new_config_data["response_data"]["suggested_config"]
