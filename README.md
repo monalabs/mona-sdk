@@ -80,7 +80,7 @@ download a suggested configuration which might include new fields based on the d
     ```
     # Note: no need to add your user_id as the key, just the configuration itself.
     new_configuration = <Your new Mona configuration represented as a python dict>
-    author = 'author@mycompany.io'  # A string identifying the user who sent the configuration (only needed if you are using unauthenticated mode).
+    author = 'author@mycompany.io'  # A string identifying the user who sent the configuration (only required if you are using unauthenticated mode).
     upload_result = my_client.upload_config(new_configuration, "My commit message", author)
     
     # the return value format will be:
