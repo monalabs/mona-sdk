@@ -481,7 +481,7 @@ class Client:
 
     def _app_server_request(self, endpoint_name, data="{}"):
         """
-        Send a request to Mona's app-server
+        Send a request to Mona's app-server.
         """
         try:
             config_response = requests.post(
