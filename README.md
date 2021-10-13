@@ -74,13 +74,13 @@ export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
 ### Configuration handling
 Mona's sdk provides simple ways to upload a new Mona configuration, download your current mona configuration, or 
-download a new suggested configuration based on your data.
+download a suggested configuration which might include new fields based on the data you previously exported to Mona.
 
 - Upload a new configuration:
     ```
     # Note: no need to add your user_id as the key, just the configuration itself.
-    new_configuration = <Your new Mona configuration>
-    author = <Who is uploding the new configuration> # provide this field if you are using unauthenticated mode.
+    new_configuration = <Your new Mona configuration represented as a python dict>
+    author = 'author@mycompany.io'  # A string identifying the user who sent the configuration (only needed if you are using unauthenticated mode).
     upload_result = my_client.upload_config(new_configuration, "My commit message", author)
     
     # the return value format will be:
