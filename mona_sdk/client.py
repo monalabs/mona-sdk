@@ -397,17 +397,29 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
+        upload_output = {"success": False, "new_config_id": ""}
+
         if not author and not self.should_use_authentication:
             self._handle_config_error(
-                "when using non authenticated client, author must be provided"
+                "When using non authenticated client, author must be provided."
             )
+            return upload_output
+
+        if not isinstance(config, dict):
+            self._handle_config_error("config must be a dict.")
+            return upload_output
+
+        keys_list = list(config.keys())
+        if len(keys_list) == 1 and keys_list[0] == self._user_id:
+            config = config[keys_list[0]]
+
         config_to_upload = {
             "config": {self._user_id: config},
             "author": author or self.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
-        upload_output = {"success": False, "new_config_id": ""}
+
         try:
             upload_response = requests.post(
                 f"{self._app_server_url}/upload_config",
