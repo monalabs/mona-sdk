@@ -383,8 +383,9 @@ class Client:
         preferences.
         Find more information on creating your configuration at:
         https://docs.monalabs.io/.
-        :param config: (dict) your configuration, no need for your tenant id as key,
-        first layer of keys should be the context classes.
+        :param config: (dict) Your new Mona configuration represented as a python dict
+        (both the configuration dict with your user_id as the top key and just the
+        configuration dict itself are accepted)
         :param commit_message: (str)
         :param author: (str) An email address identifying the configuration uploader.
         Mona will use this mail to send updates regarding re-creation of insights upon

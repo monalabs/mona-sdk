@@ -81,12 +81,12 @@ download a suggested configuration which might include new fields based on the d
 Arguments:
     
 - **config**: Your new Mona [configuration](https://docs.monalabs.io/docs/configuration-overview) represented as a 
-  python dict (both the configuration dict with your user_id as the top key and just the configuration dict are 
+  python dict (both the configuration dict with your user_id as the top key and just the configuration dict itself are 
   accepted).
 - **commit_message**: A short description of the changes that were made.
 - **author**: An email address identifying the configuration uploader. Mona will use this mail to send updates regarding
-  re-creation of insights upon this configuration change. When not supplied, the author will be the Client's api-key and 
-  you will not get updates regarding the changes mentioned above. Must be provided when using un-authenticated mode.
+  re-creation of insights upon this configuration change. When not supplied, the author will be the Client's api-key, 
+  and you will not get updates regarding the changes mentioned above. Must be provided when using un-authenticated mode.
 ```
 new_configuration = {
     "MY_CONTEXT_CLASS": {
