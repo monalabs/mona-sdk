@@ -386,7 +386,11 @@ class Client:
         :param config: (dict) your configuration, no need for your tenant id as key,
         first layer of keys should be the context classes.
         :param commit_message: (str)
-        :param author: (str) provide this field if you are using unauthenticated mode.
+        :param author: (str) An email address identifying the configuration uploader.
+        Mona will use this mail to send updates regarding re-creation of insights upon
+        this configuration change. When not supplied, the author will be the Client's
+        api-key and you will not get updates regarding the changes mentioned above.
+        Must be provided when using un-authenticated mode.
         :return: A dict holding the upload data:
         {
             "success": <was the upload successful>, (bool)
