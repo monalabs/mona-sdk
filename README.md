@@ -110,7 +110,7 @@ upload_result = my_client.upload_config(new_configuration, "My commit message", 
 ```
 my_current_mona_config = my_client.get_config()
 ```
-####Get a suggested configuration based on your data:
+#### Get a suggested configuration based on your data:
 ```
 my_suggested_mona_config = my_client.get_suggested_config()
 ```
