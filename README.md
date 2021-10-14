@@ -76,27 +76,44 @@ export_result = my_mona_client.export_batch(messages_batch_to_mona)
 Mona's sdk provides simple ways to upload a new Mona configuration, download your current mona configuration, or 
 download a suggested configuration which might include new fields based on the data you previously exported to Mona.
 
-- Upload a new configuration:
-    ```
-    # Note: no need to add your user_id as the key, just the configuration itself.
-    new_configuration = <Your new Mona configuration represented as a python dict>
-    author = 'author@mycompany.io'  # A string identifying the user who sent the configuration (only required if you are using unauthenticated mode).
-    upload_result = my_client.upload_config(new_configuration, "My commit message", author)
+#### Upload a new configuration:
+
+Arguments:
     
-    # the return value format will be:
-    # upload_result == {
-    #    "success": <was the upload successful>, (bool)
-    #    "new_config_id": <the new configuration ID> (str)
-    #}
-    ```
-- Get your current Mona configuration:
-    ```
-    my_current_mona_config = my_client.get_config()
-    ```
-- Get a suggested configuration based on your data:
-    ```
-    my_suggested_mona_config = my_client.get_suggested_config()
-    ```
+- **config**: Your new Mona [configuration](https://docs.monalabs.io/docs/configuration-overview) represented as a 
+  python dict (both the configuration dict with your user_id as the top key and just the configuration dict itself are 
+  accepted).
+- **commit_message**: A short description of the changes that were made.
+- **author**: An email address identifying the configuration uploader. Mona will use this mail to send updates regarding
+  re-creation of insights upon this configuration change. When not supplied, the author will be the Client's api-key, 
+  and you will not get updates regarding the changes mentioned above. Must be provided when using un-authenticated mode.
+```
+new_configuration = {
+    "MY_CONTEXT_CLASS": {
+        "fields": <fields dict>, 
+        "field_vectors": <field vectors dict>
+        "stanzas_global_defaults": <global defaults dict>, 
+        "stanzas": <stansas dict>,
+        "notifications": <notifications dict>
+    }
+}
+author = 'author@mycompany.io'
+upload_result = my_client.upload_config(new_configuration, "My commit message", author)
+
+# the return value format will be:
+# upload_result == {
+#    "success": <was the upload successful>, (bool)
+#    "new_config_id": <the new configuration ID> (str)
+#}
+```
+#### Get your current Mona configuration:
+```
+my_current_mona_config = my_client.get_config()
+```
+####Get a suggested configuration based on your data:
+```
+my_suggested_mona_config = my_client.get_suggested_config()
+```
 
 ## Environment variables
 

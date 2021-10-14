@@ -383,27 +383,44 @@ class Client:
         preferences.
         Find more information on creating your configuration at:
         https://docs.monalabs.io/.
-        :param config: (dict) your configuration, no need for your tenant id as key,
-        first layer of keys should be the context classes.
+        :param config: (dict) Your new Mona configuration represented as a python dict
+        (both the configuration dict with your user_id as the top key and just the
+        configuration dict itself are accepted)
         :param commit_message: (str)
-        :param author: (str) provide this field if you are using unauthenticated mode.
+        :param author: (str) An email address identifying the configuration uploader.
+        Mona will use this mail to send updates regarding re-creation of insights upon
+        this configuration change. When not supplied, the author will be the Client's
+        api-key and you will not get updates regarding the changes mentioned above.
+        Must be provided when using un-authenticated mode.
         :return: A dict holding the upload data:
         {
             "success": <was the upload successful>, (bool)
             "new_config_id": <the new configuration ID> (str)
         }
         """
+        upload_output = {"success": False, "new_config_id": ""}
+
         if not author and not self.should_use_authentication:
             self._handle_config_error(
-                "when using non authenticated client, author must be provided"
+                "When using non authenticated client, author must be provided."
             )
+            return upload_output
+
+        if not isinstance(config, dict):
+            self._handle_config_error("config must be a dict.")
+            return upload_output
+
+        keys_list = list(config.keys())
+        if len(keys_list) == 1 and keys_list[0] == self._user_id:
+            config = config[keys_list[0]]
+
         config_to_upload = {
             "config": {self._user_id: config},
             "author": author or self.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
-        upload_output = {"success": False, "new_config_id": ""}
+
         try:
             upload_response = requests.post(
                 f"{self._app_server_url}/upload_config",
