@@ -136,8 +136,12 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_SHOULD_LOG_FAILED_MESSAGES - When true, failed messages will be logged ("ERROR" level).
 - MONA_SDK_OVERRIDE_REST_API_URL- When provided, all messages to mona's rest-api will use this address instead of the default 
   one.
-- MONA_SDK_OVERRIDE_APP_SERVER_URL When provided, all configuration related calls to mona's servers will use this address instead
+- MONA_SDK_OVERRIDE_APP_SERVER_URL - When provided, all configuration related calls to mona's servers will use this address instead
   of the default one.
+- MONA_SDK_ALLOW_SUB_CONTEXT_CLASS - When set to True, allow the dot ('.') char in context_classes and context_ids, This 
+  char is used as a sub-class separator on Mona's servers, so set this argument to True only if you want to use Mona's 
+  sub-classes logic (default: False).
+  
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments):

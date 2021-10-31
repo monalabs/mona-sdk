@@ -86,6 +86,11 @@ SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
+# When this variable is True, allow the '.' char in context_classes and context_ids.
+ALLOW_SUB_CONTEXT_CLASS = get_boolean_value_for_env_var(
+    "MONA_SDK_ALLOW_SUB_CONTEXT_CLASS", False
+)
+
 GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
@@ -161,6 +166,7 @@ class Client:
         should_use_authentication=SHOULD_USE_AUTHENTICATION,
         override_rest_api_url=OVERRIDE_REST_API_URL,
         override_app_server_url=OVERRIDE_APP_SERVER_URL,
+        allow_sub_context_class=ALLOW_SUB_CONTEXT_CLASS,
         user_id=None,
     ):
         """
@@ -185,6 +191,7 @@ class Client:
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
         self.should_use_authentication = should_use_authentication
+        self.allow_sub_context_class = allow_sub_context_class
 
         if should_use_authentication:
             self.raise_authentication_exceptions = raise_authentication_exceptions
@@ -278,7 +285,9 @@ class Client:
 
         messages_to_send = []
         for message_event in events:
-            if not validate_mona_single_message(message_event):
+            if not validate_mona_single_message(
+                message_event, self.allow_sub_context_class
+            ):
                 return handle_export_error(
                     "Messages to export must be of MonaSingleMessage type.",
                     self.raise_export_exceptions,

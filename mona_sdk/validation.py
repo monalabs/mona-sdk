@@ -66,11 +66,24 @@ def _is_json_serializable(message):
     return True
 
 
-def validate_mona_single_message(message_event):
+def validate_mona_single_message(message_event, allow_sub_context_class):
     # Check that message_event contains all required fields.
     required_fields = ("message", "contextClass")
+    if not is_dict_contains_fields(message_event, required_fields):
+        return False
 
-    return is_dict_contains_fields(message_event, required_fields)
+    if not allow_sub_context_class:
+        if "." in message_event["contextClass"] or (
+            "contextId" in message_event and "." in message_event["contextId"]
+        ):
+            get_logger().error(
+                "Mona uses the '.' (dot) char as a sub-context separator. If you want "
+                "to use the sub-context logic you should set "
+                "allow_sub_context_class=True on the mona client constructor (or via "
+                "ENV VAR)."
+            )
+            return False
+    return True
 
 
 def update_mona_fields_names(message):
@@ -103,9 +116,7 @@ def handle_export_error(error_message, should_raise_exception, failed_message):
     """
     get_logger().error(error_message)
     if failed_message:
-        get_logger().error(
-            f"Failed to send the following to mona: {failed_message}"
-        )
+        get_logger().error(f"Failed to send the following to mona: {failed_message}")
     if should_raise_exception:
         raise MonaExportException(error_message)
     return False
