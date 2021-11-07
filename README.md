@@ -134,13 +134,22 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC - Number of seconds to wait between 
   every authentication retry (default value: 2).
 - MONA_SDK_SHOULD_LOG_FAILED_MESSAGES - When true, failed messages will be logged ("ERROR" level).
-- MONA_SDK_OVERRIDE_REST_API_URL- When provided, all messages to mona's rest-api will use this address instead of the default 
-  one.
-- MONA_SDK_OVERRIDE_APP_SERVER_URL When provided, all configuration related calls to mona's servers will use this address instead
-  of the default one.
+- MONA_SDK_OVERRIDE_APP_SERVER_HOST - When provided, all configuration related calls to mona's servers will use this 
+  host name instead of the default one ("api<user_id>.monalabs.io").
+- MONA_SDK_OVERRIDE_REST_API_HOST- When provided, all messages (data export) to mona's rest-api will use this host 
+  address instead of the default one ("incoming<user_id>.monalabs.io").
+- MONA_SDK_OVERRIDE_REST_API_URL- When provided, all messages to mona's rest-api will use this full url address 
+  (including "http" prefix and endpoints suffix) instead of the default one. 
+  **Note**: this is mostly for internal use, please use MONA_SDK_OVERRIDE_REST_API_HOST if needed.
+- MONA_SDK_SHOULD_USE_SSL - Should the communication with Mona's servers be with (https) or without (http) ssl 
+  (default: True).
+- MONA_SDK_SHOULD_USE_AUTHENTICATION - When set to false, the communication with Mona's servers will not use 
+  authentication (user_id should be provided to the Client constructor instead of an api_key and a secret), **Note**: 
+  this mode is not automatically supported and must be explicitly requested from Mona's team.
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
-constructor as follows (the environment variables are used as defaults for these arguments):
+constructor as follows (the environment variables are used as defaults for these arguments, and by passing these 
+arguments to the constructor you can override the default values you set with the environment variables):
 ```
 my_mona_client = Client(
     api_key,
