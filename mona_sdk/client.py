@@ -64,9 +64,12 @@ SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
-OVERRIDE_APP_SERVER_URL = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_URL")
+OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
 
+# TODO(anat): Once no one is using it, remove this env var (leave only
+#  OVERRIDE_REST_API_HOST).
 OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
+OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
 
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
@@ -159,8 +162,9 @@ class Client:
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
         should_use_authentication=SHOULD_USE_AUTHENTICATION,
-        override_rest_api_url=OVERRIDE_REST_API_URL,
-        override_app_server_url=OVERRIDE_APP_SERVER_URL,
+        override_rest_api_full_url=OVERRIDE_REST_API_URL,
+        override_rest_api_host=OVERRIDE_REST_API_HOST,
+        override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
     ):
         """
@@ -203,17 +207,24 @@ class Client:
         # this point the client was successfully authenticated and self._get_user_id()
         # will work.
         self._user_id = user_id or self._get_user_id()
-        self._rest_api_url = override_rest_api_url or self._get_rest_api_url()
-        self._app_server_url = override_app_server_url or self._get_app_server_url()
+        self._rest_api_url = (
+            override_rest_api_full_url
+            or self._get_rest_api_export_url(override_host=override_rest_api_host)
+        )
+        self._app_server_url = self._get_app_server_url(
+            override_host=override_app_server_host
+        )
 
-    def _get_rest_api_url(self):
+    def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
+        host_name = override_host or f"incoming{self._user_id}.monalabs.io"
         endpoint_name = "export" if self.should_use_authentication else "monaExport"
-        return f"{http_protocol}://incoming{self._user_id}.monalabs.io/{endpoint_name}"
+        return f"{http_protocol}://{host_name}/{endpoint_name}"
 
-    def _get_app_server_url(self):
+    def _get_app_server_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
-        return f"{http_protocol}://api{self._user_id}.monalabs.io"
+        host_name = override_host or f"api{self._user_id}.monalabs.io"
+        return f"{http_protocol}://{host_name}"
 
     def is_active(self):
         """
