@@ -145,7 +145,7 @@ Mona uses several environment variables you can set as you prefer:
   (default: True).
 - MONA_SDK_SHOULD_USE_AUTHENTICATION - When set to false, the communication with Mona's servers will not use 
   authentication (user_id should be provided to the Client constructor instead of an api_key and a secret), **Note**: 
-  this mode is not automatically supported and must be explicitly requested from Mona's team.
+  this mode is not supported on the servers by default, and must be explicitly requested from Mona's team.
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments, and by passing these 
