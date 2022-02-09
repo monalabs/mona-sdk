@@ -23,10 +23,10 @@ import requests
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import (
-    MonaConfigException,
+    MonaServiceException,
     MonaInitializationException,
 )
-from .client_util import get_boolean_value_for_env_var
+from .client_util import get_boolean_value_for_env_var, remove_items_by_value
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -54,7 +54,7 @@ RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
 )
 
-RAISE_CONFIG_EXCEPTIONS = get_boolean_value_for_env_var(
+RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
 )
 
@@ -89,7 +89,7 @@ SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
-GET_CONFIG_ERROR_MESSAGE = "Could not get server response with the current config."
+SERVICE_ERROR_MESSAGE = "Could not get server response with the wanted service."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
 )
@@ -99,6 +99,11 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
     "\nNotice that should_use_authentication is set to False, which is not supported by"
     " default and must be explicitly requested from Mona team."
 )
+
+# The argument to use as a default value on the values of the data argument (dict) when
+# calling _app_server_request(). Use this and not None in order to be able to pass a
+# None argument if needed.
+UNPROVIDED_FIELD = "unprovided field"
 
 
 @dataclass
@@ -156,7 +161,7 @@ class Client:
         secret=None,
         raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
         raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
-        raise_config_exceptions=RAISE_CONFIG_EXCEPTIONS,
+        raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
         num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
@@ -185,7 +190,7 @@ class Client:
         self.secret = secret
 
         self.raise_export_exceptions = raise_export_exceptions
-        self.raise_config_exceptions = raise_config_exceptions
+        self.raise_service_exceptions = raise_service_exceptions
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
         self.should_use_authentication = should_use_authentication
@@ -396,7 +401,7 @@ class Client:
         https://docs.monalabs.io/.
         :param config: (dict) Your new Mona configuration represented as a python dict
         (both the configuration dict with your user_id as the top key and just the
-        configuration dict itself are accepted)
+        configuration dict itself are accepted).
         :param commit_message: (str)
         :param author: (str) An email address identifying the configuration uploader.
         Mona will use this mail to send updates regarding re-creation of insights upon
@@ -412,13 +417,13 @@ class Client:
         upload_output = {"success": False, "new_config_id": ""}
 
         if not author and not self.should_use_authentication:
-            self._handle_config_error(
+            self._handle_service_error(
                 "When using non authenticated client, author must be provided."
             )
             return upload_output
 
         if not isinstance(config, dict):
-            self._handle_config_error("config must be a dict.")
+            self._handle_service_error("config must be a dict.")
             return upload_output
 
         keys_list = list(config.keys())
@@ -445,17 +450,42 @@ class Client:
             upload_output["success"] = upload_response.ok
 
             if not upload_output["success"]:
-                # Raise an exception is asked to.
-                self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
+                # Raise an exception if asked to.
+                self._handle_service_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         except ConnectionError:
             # Raise an exception if asked to.
-            self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+            self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
         except JSONDecodeError:
             # Raise an exception if asked to.
-            self._handle_config_error(UPLOAD_CONFIG_ERROR_MESSAGE)
+            self._handle_service_error(UPLOAD_CONFIG_ERROR_MESSAGE)
 
         return upload_output
+
+    @Decorators.refresh_token_if_needed
+    def upload_config_per_context_class(
+        self, author, commit_message, context_class, config
+    ):
+        """
+        A wrapper function for "Upload Config per Context Class" REST endpoint. view
+        full documentation here:
+        https://docs.monalabs.io/docs/upload-config-per-context-class-via-rest-api
+        """
+        app_server_response = self._app_server_request(
+            "upload_config_for_context_class",
+            data={
+                "author": author,
+                "commit_message": commit_message,
+                "context_class": context_class,
+                "config": config,
+            },
+        )
+        if "response_data" not in app_server_response:
+            self._handle_service_error(
+                SERVICE_ERROR_MESSAGE + f" Service response: {app_server_response}"
+            )
+
+        return app_server_response
 
     @Decorators.refresh_token_if_needed
     def get_config(self):
@@ -470,29 +500,209 @@ class Client:
                 ]
             }
         except KeyError:
-            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     @Decorators.refresh_token_if_needed
     def get_suggested_config(self):
         """
-        :return: A json-serializable dict with a suggested configuration.
+        A wrapper function for "Retrieve Suggested Config" REST endpoint. view full
+        documentation here:
+        https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api
         """
-        app_server_response = self._app_server_request("get_new_config_fields")
-        try:
-            return app_server_response["response_data"]["suggested_config"]
-        except KeyError:
-            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+        return self._app_server_request("get_new_config_fields")
 
-    def _handle_config_error(self, error_message):
+    @Decorators.refresh_token_if_needed
+    def get_config_history(self, number_of_revisions=UNPROVIDED_FIELD):
         """
-        Logs an error and raises MonaConfigException if RAISE_CONFIG_EXCEPTIONS is true,
-        else returns false.
+        A wrapper function for "Retrieve Config History" REST endpoint. view full
+        documentation here:
+        https://docs.monalabs.io/docs/retrieve-config-history-via-rest-api
+        """
+        return self._app_server_request(
+            "get_config_history", data={"number_of_revisions": number_of_revisions}
+        )
+
+    @Decorators.refresh_token_if_needed
+    def validate_config(
+        self,
+        config,
+        list_of_context_ids=UNPROVIDED_FIELD,
+        latest_amount=UNPROVIDED_FIELD,
+    ):
+        """
+        A wrapper function for "Validate Config" REST endpoint. view full documentation
+        here: https://docs.monalabs.io/docs/validate-config-via-rest-api
+        """
+        return self._app_server_request(
+            "validate_config",
+            data={
+                "config": config,
+                "list_of_context_ids": list_of_context_ids,
+                "latest_amount": latest_amount,
+            },
+        )
+
+    @Decorators.refresh_token_if_needed
+    def get_insights(
+        self,
+        context_class,
+        min_segment_size,
+        insight_types=UNPROVIDED_FIELD,
+        metric_name=UNPROVIDED_FIELD,
+        min_insight_score=UNPROVIDED_FIELD,
+        time_range_seconds=UNPROVIDED_FIELD,
+        first_discovered_on_range_seconds=UNPROVIDED_FIELD,
+    ):
+        """
+        A wrapper function for "Retrieve Insights" REST endpoint. view full
+        documentation here:
+        https://docs.monalabs.io/docs/retrieve-insights-using-the-rest-api
+        """
+        return self._app_server_request(
+            "insights",
+            data={
+                "context_class": context_class,
+                "min_segment_size": min_segment_size,
+                "insight_types": insight_types,
+                "metric_name": metric_name,
+                "min_insight_score": min_insight_score,
+                "time_range_seconds": time_range_seconds,
+                "first_discovered_on_range_seconds": first_discovered_on_range_seconds,
+            },
+        )
+
+    def get_ingested_data_for_a_specific_segment(
+        self,
+        context_class,
+        start_time,
+        end_time,
+        segment,
+        excluded_segments=UNPROVIDED_FIELD,
+    ):
+        """
+        A wrapper function for "Retrieve Ingested Data for a Specific Segment" REST
+        endpoint. view full documentation here:
+        https://docs.monalabs.io/docs/retrieve-ingested-data-for-a-specific-segment-via-rest-api
+        """
+        return self._app_server_request(
+            "get_ingested_data",
+            data={
+                "context_class": context_class,
+                "start_time": start_time,
+                "end_time": end_time,
+                "segment": segment,
+                "excluded_segments": excluded_segments,
+            },
+        )
+
+    def get_suggested_config_from_user_input(self, events):
+        """
+        A wrapper function for "Retrieve Suggested Config from User Input" REST
+        endpoint. view full documentation here:
+        https://docs.monalabs.io/docs/retrieve-suggested-config-from-user-input-via-rest-api
+        """
+        app_server_response = self._app_server_request(
+            "suggest_new_config",
+            data={"events": events},
+        )
+        if "response_data" not in app_server_response:
+            self._handle_service_error(SERVICE_ERROR_MESSAGE)
+
+        return app_server_response
+
+    def get_aggregated_data_of_a_specific_segment(
+        self,
+        context_class,
+        timestamp_from,
+        timestamp_to,
+        time_series_resolutions=UNPROVIDED_FIELD,
+        with_histogram=UNPROVIDED_FIELD,
+        time_zone=UNPROVIDED_FIELD,
+        metrics=UNPROVIDED_FIELD,
+        requested_segments=UNPROVIDED_FIELD,
+        excluded_segments=UNPROVIDED_FIELD,
+        baseline_segment=UNPROVIDED_FIELD,
+    ):
+        """
+        A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
+        endpoint. view full documentation here:
+        https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api
+        """
+        return self._app_server_request(
+            "get_segment",
+            data={
+                "context_class": context_class,
+                "timestamp_from": timestamp_from,
+                "timestamp_to": timestamp_to,
+                "time_series_resolutions": time_series_resolutions,
+                "with_histogram": with_histogram,
+                "time_zone": time_zone,
+                "metrics": metrics,
+                "requested_segments": requested_segments,
+                "excluded_segments": excluded_segments,
+                "baseline_segment": baseline_segment,
+            },
+        )
+
+    def get_aggregated_stats_of_a_specific_segmentation(
+        self,
+        context_class,
+        dimension,
+        target_time_range,
+        compared_time_range,
+        metric_1_field,
+        metric_2_field,
+        metric_1_type,
+        metric_2_type,
+        min_segment_size,
+        sort_function,
+        baseline_segment=UNPROVIDED_FIELD,
+        excluded_segments=UNPROVIDED_FIELD,
+        target_segments_filter=UNPROVIDED_FIELD,
+        compared_segments_filter=UNPROVIDED_FIELD,
+    ):
+        """
+        A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
+        endpoint. view full documentation here:
+        https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api
+        """
+        app_server_response = self._app_server_request(
+            "stats",
+            data={
+                "context_class": context_class,
+                "dimension": dimension,
+                "target_time_range": target_time_range,
+                "compared_time_range": compared_time_range,
+                "metric_1_field": metric_1_field,
+                "metric_2_field": metric_2_field,
+                "metric_1_type": metric_1_type,
+                "metric_2_type": metric_2_type,
+                "min_segment_size": min_segment_size,
+                "sort_function": sort_function,
+                "baseline_segment": baseline_segment,
+                "excluded_segments": excluded_segments,
+                "target_segments_filter": target_segments_filter,
+                "compared_segments_filter": compared_segments_filter,
+            },
+        )
+
+        if "response_data" not in app_server_response:
+            self._handle_service_error(
+                f"{SERVICE_ERROR_MESSAGE} Server response: {app_server_response}"
+            )
+
+        return app_server_response
+
+    def _handle_service_error(self, error_message):
+        """
+        Logs an error and raises MonaServiceException if RAISE_SERVICE_EXCEPTIONS is
+        true, returns false otherwise.
         """
         error_message += self._get_unauthenticated_mode_error_message()
 
         self._logger.error(error_message)
-        if self.raise_config_exceptions:
-            raise MonaConfigException(error_message)
+        if self.raise_service_exceptions:
+            raise MonaServiceException(error_message)
         return False
 
     def _get_unauthenticated_mode_error_message(self):
@@ -507,25 +717,28 @@ class Client:
             else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
         )
 
-    def _app_server_request(self, endpoint_name, data="{}"):
+    def _app_server_request(self, endpoint_name, data=None):
         """
-        Send a request to Mona's app-server.
+        Send a request to Mona's app-server given endpoint with the given data (should
+        be a dict with the endpoint requested fields).
         """
         try:
-            config_response = requests.post(
+            app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
-                data=data,
+                # Remove keys with UNPROVIDED_FIELD values to avoid overriding the
+                # default value on the endpoint itself.
+                json=remove_items_by_value(data, UNPROVIDED_FIELD) if data else {},
             )
-            json_response = config_response.json()
-            if not config_response.ok:
-                return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+            json_response = app_server_response.json()
+            if not app_server_response.ok:
+                return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
             return json_response
 
         except ConnectionError:
-            return self._handle_config_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+            return self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
         except JSONDecodeError:
-            return self._handle_config_error(GET_CONFIG_ERROR_MESSAGE)
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
