@@ -88,7 +88,10 @@ Mona sdk provides a simple API to your information on Mona. You can see all func
 #### [get_aggregated_data_of_a_specific_segment](https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api)
 #### [get_aggregated_stats_of_a_specific_segmentation](https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api)
 
-
+#### Get your current Mona configuration:
+```
+my_current_mona_config = my_client.get_config()
+```
 #### Upload a new configuration:
 
 Arguments:
