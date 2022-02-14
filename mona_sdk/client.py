@@ -55,7 +55,7 @@ RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
 )
 
 RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
-    "MONA_SDK_RAISE_CONFIG_EXCEPTIONS", False
+    "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
 SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
@@ -89,7 +89,7 @@ SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
-SERVICE_ERROR_MESSAGE = "Could not get server response with the wanted service."
+SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
 )
@@ -103,7 +103,7 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
 # None argument if needed.
-UNPROVIDED_FIELD = "unprovided field"
+UNPROVIDED_VALUE = "mona_unprovided_value"
 
 
 @dataclass
@@ -509,10 +509,14 @@ class Client:
         documentation here:
         https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api
         """
-        return self._app_server_request("get_new_config_fields")
+        app_server_response = self._app_server_request("get_new_config_fields")
+        try:
+            return app_server_response["response_data"]["suggested_config"]
+        except KeyError:
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     @Decorators.refresh_token_if_needed
-    def get_config_history(self, number_of_revisions=UNPROVIDED_FIELD):
+    def get_config_history(self, number_of_revisions=UNPROVIDED_VALUE):
         """
         A wrapper function for "Retrieve Config History" REST endpoint. view full
         documentation here:
@@ -526,8 +530,8 @@ class Client:
     def validate_config(
         self,
         config,
-        list_of_context_ids=UNPROVIDED_FIELD,
-        latest_amount=UNPROVIDED_FIELD,
+        list_of_context_ids=UNPROVIDED_VALUE,
+        latest_amount=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Validate Config" REST endpoint. view full documentation
@@ -547,11 +551,11 @@ class Client:
         self,
         context_class,
         min_segment_size,
-        insight_types=UNPROVIDED_FIELD,
-        metric_name=UNPROVIDED_FIELD,
-        min_insight_score=UNPROVIDED_FIELD,
-        time_range_seconds=UNPROVIDED_FIELD,
-        first_discovered_on_range_seconds=UNPROVIDED_FIELD,
+        insight_types=UNPROVIDED_VALUE,
+        metric_name=UNPROVIDED_VALUE,
+        min_insight_score=UNPROVIDED_VALUE,
+        time_range_seconds=UNPROVIDED_VALUE,
+        first_discovered_on_range_seconds=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Insights" REST endpoint. view full
@@ -577,7 +581,7 @@ class Client:
         start_time,
         end_time,
         segment,
-        excluded_segments=UNPROVIDED_FIELD,
+        excluded_segments=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Ingested Data for a Specific Segment" REST
@@ -615,13 +619,13 @@ class Client:
         context_class,
         timestamp_from,
         timestamp_to,
-        time_series_resolutions=UNPROVIDED_FIELD,
-        with_histogram=UNPROVIDED_FIELD,
-        time_zone=UNPROVIDED_FIELD,
-        metrics=UNPROVIDED_FIELD,
-        requested_segments=UNPROVIDED_FIELD,
-        excluded_segments=UNPROVIDED_FIELD,
-        baseline_segment=UNPROVIDED_FIELD,
+        time_series_resolutions=UNPROVIDED_VALUE,
+        with_histogram=UNPROVIDED_VALUE,
+        time_zone=UNPROVIDED_VALUE,
+        metrics=UNPROVIDED_VALUE,
+        requested_segments=UNPROVIDED_VALUE,
+        excluded_segments=UNPROVIDED_VALUE,
+        baseline_segment=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
@@ -656,10 +660,10 @@ class Client:
         metric_2_type,
         min_segment_size,
         sort_function,
-        baseline_segment=UNPROVIDED_FIELD,
-        excluded_segments=UNPROVIDED_FIELD,
-        target_segments_filter=UNPROVIDED_FIELD,
-        compared_segments_filter=UNPROVIDED_FIELD,
+        baseline_segment=UNPROVIDED_VALUE,
+        excluded_segments=UNPROVIDED_VALUE,
+        target_segments_filter=UNPROVIDED_VALUE,
+        compared_segments_filter=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
@@ -730,7 +734,7 @@ class Client:
                 ),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding the
                 # default value on the endpoint itself.
-                json=remove_items_by_value(data, UNPROVIDED_FIELD) if data else {},
+                json=remove_items_by_value(data, UNPROVIDED_VALUE) if data else {},
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
