@@ -72,10 +72,26 @@ for context_instance in my_data:
         
 export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
-### Configuration handling
-Mona's sdk provides simple ways to upload a new Mona configuration, download your current mona configuration, or 
-download a suggested configuration which might include new fields based on the data you previously exported to Mona.
+## Mona SDK services
+Mona sdk provides a simple API to access your information and control your configuration and data on Mona.
+You can see all functions info and examples on [our docs](https://docs.monalabs.io/docs) under REST API.
 
+### The available services are:
+
+#### [get_suggested_config](https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api)
+#### [validate_config](https://docs.monalabs.io/docs/validate-config-via-rest-api)
+#### [upload_config_per_context_class](https://docs.monalabs.io/docs/upload-config-per-context-class-via-rest-api)
+#### [get_config_history](https://docs.monalabs.io/docs/retrieve-config-history-via-rest-api)
+#### [get_insights](https://docs.monalabs.io/docs/retrieve-insights-using-the-rest-api)
+#### [get_ingested_data_for_a_specific_segment](https://docs.monalabs.io/docs/retrieve-ingested-data-for-a-specific-segment-via-rest-api)
+#### [get_suggested_config_from_user_input](https://docs.monalabs.io/docs/retrieve-suggested-config-from-user-input-via-rest-api)
+#### [get_aggregated_data_of_a_specific_segment](https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api)
+#### [get_aggregated_stats_of_a_specific_segmentation](https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api)
+
+#### Get your current Mona configuration:
+```
+my_current_mona_config = my_client.get_config()
+```
 #### Upload a new configuration:
 
 Arguments:
@@ -106,14 +122,7 @@ upload_result = my_client.upload_config(new_configuration, "My commit message", 
 #    "new_config_id": <the new configuration ID> (str)
 #}
 ```
-#### Get your current Mona configuration:
-```
-my_current_mona_config = my_client.get_config()
-```
-#### Get a suggested configuration based on your data:
-```
-my_suggested_mona_config = my_client.get_suggested_config()
-```
+
 
 ## Environment variables
 
@@ -125,8 +134,9 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_RAISE_EXPORT_EXCEPTIONS - set to true if you would like Mona's client to
   raise export related exceptions. When set to false and an export (or part of it) fails,
   the failure reason will be logged (default value: False).
-- MONA_SDK_RAISE_CONFIG_EXCEPTIONS - set to true if you would like Mona's client to
-  raise config related exceptions. When set to false, and such an exception is met,
+- MONA_SDK_RAISE_SERVICE_EXCEPTIONS - set to true if you would like Mona's client to
+  raise services requests related exceptions (see all available services under [Mona SDK services](#mona-sdk-services) 
+  section in this doc). When set to false, and such an exception is met,
   the function will log an error and return false (default value: False).
 - MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION - Number of retries to authenticate in case 
   Mona's client unexpectedly cannot get an authentication response from the server
@@ -156,7 +166,7 @@ my_mona_client = Client(
     secret,
     raise_authentication_exceptions=True,
     raise_export_exceptions=True,
-    raise_config_exceptions=True,
+    raise_service_exceptions=True,
     num_of_retries_for_authentication=6,
     wait_time_for_authentication_retries=0,
     should_log_failed_messages=True,
