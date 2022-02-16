@@ -73,8 +73,8 @@ for context_instance in my_data:
 export_result = my_mona_client.export_batch(messages_batch_to_mona)
 ```
 ## Mona SDK services
-Mona sdk provides a simple API to your information on Mona. You can see all functions info and examples on 
-[our docs](https://docs.monalabs.io/docs) under REST API.
+Mona sdk provides a simple API to access your information and control your configuration and data on Mona.
+You can see all functions info and examples on [our docs](https://docs.monalabs.io/docs) under REST API.
 
 ### The available services are:
 

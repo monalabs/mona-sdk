@@ -575,6 +575,7 @@ class Client:
             },
         )
 
+    @Decorators.refresh_token_if_needed
     def get_ingested_data_for_a_specific_segment(
         self,
         context_class,
@@ -599,6 +600,7 @@ class Client:
             },
         )
 
+    @Decorators.refresh_token_if_needed
     def get_suggested_config_from_user_input(self, events):
         """
         A wrapper function for "Retrieve Suggested Config from User Input" REST
@@ -614,6 +616,7 @@ class Client:
 
         return app_server_response
 
+    @Decorators.refresh_token_if_needed
     def get_aggregated_data_of_a_specific_segment(
         self,
         context_class,
@@ -648,6 +651,7 @@ class Client:
             },
         )
 
+    @Decorators.refresh_token_if_needed
     def get_aggregated_stats_of_a_specific_segmentation(
         self,
         context_class,
