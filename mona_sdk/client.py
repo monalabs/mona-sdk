@@ -278,8 +278,8 @@ class Client:
         :param events: List[MonaSingleMessage]
             Events should be a list of MonaSingleMessage (provided in this module).
         :param default_action: str
-            the default action to the batch, will be the action of messages with no
-            action provided.
+            The default action to the batch. Will be set as the action of all messages
+            with no action provided.
         :return: dict
             Returns a dict of the following format:
             {
