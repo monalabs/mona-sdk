@@ -39,6 +39,9 @@ message, containing the following:
   data being sent. It should be a date (ISO string, or a Unix time number) representing
   the time the message was created. If this field isn't provided, the message 
   exportTimestamp will be the time in which the exporting function was called.
+- **action**: (str) The action Mona should do with the message to an existing context: use "ADD" if you want the fields 
+  on the message to be added to the existing fields, or use "OVERWRITE" the these fields should replace the existing 
+  ones.
 
 ```
 from mona_sdk.client import Client, MonaSingleMessage
@@ -55,7 +58,8 @@ succeed_to_export = my_mona_client.export(MonaSingleMessage(
     message={'monitoring_information_1': '1', 'monitoring_information_2': '2'}, 
     contextClass='MY_CONTEXT_CLASS_NAME', 
     contextId='CONTEXT_INSTANCE_UNIQUE_ID', 
-    exportTimestamp=time.time()
+    exportTimestamp=time.time(),
+    action="OVERWRITE"
 ))
 
 # Another option is to send a batch of messages to Mona using export_batch:
@@ -70,7 +74,11 @@ for context_instance in my_data:
             )
         )
         
-export_result = my_mona_client.export_batch(messages_batch_to_mona)
+# Use dafault_action to select a default action for messages with no specified action.
+export_result = my_mona_client.export_batch(
+    messages_batch_to_mona, 
+    default_action="OVERWRITE"
+    )
 ```
 ## Mona SDK services
 Mona sdk provides a simple API to access your information and control your configuration and data on Mona.

@@ -125,6 +125,8 @@ class MonaSingleMessage:
             will use when considering the data being sent. It should be a date (ISO
             string or a Unix time number) representing the time the message was created.
             If not supplied, current time is used.
+        :param action (str): (Optional) the action to do with this message, "ADD" or
+            "OVERWRITE" (default: "OVERWRITE").
 
 
     A new message initialization would look like this:
@@ -133,6 +135,7 @@ class MonaSingleMessage:
         contextClass="MY_CONTEXT_CLASS_NAME",
         contextId=<the context instance unique id>,
         exportTimestamp=<the message export timestamp>,
+        action="ADD"/"OVERWRITE",
     )
     """
 
@@ -140,6 +143,7 @@ class MonaSingleMessage:
     contextClass: str
     contextId: str = None
     exportTimestamp: int or str = None
+    action: str = None
 
     def get_dict(self):
         return {
@@ -268,11 +272,14 @@ class Client:
         return export_result and export_result["failed"] == 0
 
     @Decorators.refresh_token_if_needed
-    def export_batch(self, events: List[MonaSingleMessage]):
+    def export_batch(self, events: List[MonaSingleMessage], default_action=None):
         """
         Use this function to easily send a batch of MonaSingleMessage to Mona.
         :param events: List[MonaSingleMessage]
             Events should be a list of MonaSingleMessage (provided in this module).
+        :param default_action: str
+            the default action to the batch, will be the action of messages with no
+            action provided.
         :return: dict
             Returns a dict of the following format:
             {
@@ -283,9 +290,9 @@ class Client:
                                   for each message the reason it failed.
             }
         """
-        return self._export_batch_inner(events)
+        return self._export_batch_inner(events, default_action)
 
-    def _export_batch_inner(self, events: List[MonaSingleMessage]):
+    def _export_batch_inner(self, events: List[MonaSingleMessage], default_action=None):
         events = mona_messages_to_dicts_validation(
             events, self.raise_export_exceptions, self.should_log_failed_messages
         )
@@ -318,7 +325,9 @@ class Client:
 
         # Create and send the rest call to Mona's rest-api.
         try:
-            rest_api_response = self._send_mona_rest_api_request(messages_to_send)
+            rest_api_response = self._send_mona_rest_api_request(
+                messages_to_send, default_action
+            )
         except ConnectionError:
             return handle_export_error(
                 "Cannot connect to rest-api",
@@ -345,16 +354,19 @@ class Client:
 
         return client_response
 
-    def _send_mona_rest_api_request(self, messages):
+    def _send_mona_rest_api_request(self, messages, default_action=None):
         """
         Sends a REST call to Mona's servers with the provided messages.
         :return: A REST response.
         """
+        body = {"userId": self._user_id, "messages": messages}
+        if default_action:
+            body["defaultAction"] = default_action
         return requests.request(
             "POST",
             self._rest_api_url,
             headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
-            json={"userId": self._user_id, "messages": messages},
+            json=body,
         )
 
     @staticmethod
