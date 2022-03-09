@@ -39,9 +39,9 @@ message, containing the following:
   data being sent. It should be a date (ISO string, or a Unix time number) representing
   the time the message was created. If this field isn't provided, the message 
   exportTimestamp will be the time in which the exporting function was called.
-- **action** (str): (Optional) The action Mona should do with the message to an existing context: use "ADD" if you want
-  the fields on the message to be added to the existing fields, or use "OVERWRITE" if these fields should replace the 
-  existing ones.
+- **action** (str): (Optional) The action Mona should do with the message to an existing context: Use "ADD" if you want 
+  the values in the given fields to be added to the values already existing in these fields in this context, or use 
+  "OVERWRITE" (default) if the values in the given fields should replace values already existing in the given fields.
   
 ```
 from mona_sdk.client import Client, MonaSingleMessage
