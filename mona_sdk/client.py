@@ -125,8 +125,8 @@ class MonaSingleMessage:
             will use when considering the data being sent. It should be a date (ISO
             string or a Unix time number) representing the time the message was created.
             If not supplied, current time is used.
-        :param action (str): (Optional) the action to do with this message, "ADD" or
-            "OVERWRITE" (default: "OVERWRITE").
+        :param action (str): (Optional) The action to use on the values in the fields of
+            this message, "ADD" or "OVERWRITE" (default: "OVERWRITE").
 
 
     A new message initialization would look like this:
