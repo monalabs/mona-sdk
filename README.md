@@ -41,8 +41,8 @@ message, containing the following:
   exportTimestamp will be the time in which the exporting function was called.
 - **action** (str): (Optional) The action Mona should do with the message to an existing context:
   - "OVERWRITE": (default) The values in the given fields will replace values already existing in the given fields.
-  - "ADD": The values in the given fields will be added to the values already existing in these fields in this context.
-  - "NEW": completely reset the entire record of the context id to only refer to the given message, so everything before
+  - "ADD": The values in the given fields will be added to the values already existing in these fields.
+  - "NEW": completely reset the entire record of the given context id to only refer to the given message, so everything before
     this message is no longer relevant.
   - "DELETE": Completely remove this context id data - until new data arrives.
   
