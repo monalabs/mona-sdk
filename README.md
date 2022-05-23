@@ -45,7 +45,6 @@ message, containing the following:
     eventually treated as arrays of values).
   - "NEW": completely reset the entire record of the given context id to only refer to the given message, so everything before
     this message is no longer relevant.
-  - "DELETE": Completely remove this context id data - until new data arrives.
   
 ```
 from mona_sdk.client import Client, MonaSingleMessage
