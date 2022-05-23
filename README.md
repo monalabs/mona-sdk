@@ -27,19 +27,25 @@ We recommend you get acquainted with Mona's key concepts
 
 **MonaSingleMessage**: A dataclass wrapping all needed fields for a Mona data exporting 
 message, containing the following:
-- **contextClass**: (str) The name of the context class to which you are currently exporting data.
-- **message**: (dict) A JSON-serializable dict containing all relevant monitoring information
+- **contextClass** (str): (Required) The name of the context class to which you are currently exporting data.
+- **message** (dict): (Required) A JSON-serializable dict containing all relevant monitoring information
   to send to Mona's servers.
-- **contextId**: (str) A unique identifier for the current context instance.
+- **contextId** (str): (Optional) A unique identifier for the current context instance.
   One can export multiple messages with the same context id and Mona would aggregate all 
   of these messages to one big message on its backend. If none is given, Mona will create 
   a random uuid for it. This is highly unrecommended - since it takes away the option to 
   update this data in the future.
-- **exportTimestamp**: (int | str) This is the primary timestamp Mona will use when considering the 
+- **exportTimestamp** (int | str): (Optional) This is the primary timestamp Mona will use when considering the 
   data being sent. It should be a date (ISO string, or a Unix time number) representing
   the time the message was created. If this field isn't provided, the message 
   exportTimestamp will be the time in which the exporting function was called.
-
+- **action** (str): (Optional) The action Mona should do with the message to an existing context:
+  - "OVERWRITE": (default) The values in the given fields will replace values already existing in the given fields.
+  - "ADD": The values in the given fields will be added to the values already existing in these fields (will be 
+    eventually treated as arrays of values).
+  - "NEW": completely reset the entire record of the given context id to only refer to the given message, so everything before
+    this message is no longer relevant.
+  
 ```
 from mona_sdk.client import Client, MonaSingleMessage
 import time
@@ -55,7 +61,8 @@ succeed_to_export = my_mona_client.export(MonaSingleMessage(
     message={'monitoring_information_1': '1', 'monitoring_information_2': '2'}, 
     contextClass='MY_CONTEXT_CLASS_NAME', 
     contextId='CONTEXT_INSTANCE_UNIQUE_ID', 
-    exportTimestamp=time.time()
+    exportTimestamp=time.time(),
+    action="OVERWRITE"
 ))
 
 # Another option is to send a batch of messages to Mona using export_batch:
@@ -70,7 +77,11 @@ for context_instance in my_data:
             )
         )
         
-export_result = my_mona_client.export_batch(messages_batch_to_mona)
+# Use dafault_action to select a default action for messages with no specified action.
+export_result = my_mona_client.export_batch(
+    messages_batch_to_mona, 
+    default_action="ADD",
+    )
 ```
 ## Mona SDK services
 Mona sdk provides a simple API to access your information and control your configuration and data on Mona.
