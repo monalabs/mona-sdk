@@ -167,6 +167,9 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_SHOULD_USE_AUTHENTICATION - When set to false, the communication with Mona's servers will not use 
   authentication (user_id should be provided to the Client constructor instead of an api_key and a secret), **Note**: 
   this mode is not supported on the servers by default, and must be explicitly requested from Mona's team.
+- MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT - When set to true, Mona's client will filter out all fields with None values 
+  from the message dict to export. There is an addition argument on both export() and export_batch() called 
+  filter_none_fields that can be used to override this value for a single exported message/batch. (default value: False)
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments, and by passing these 
@@ -181,6 +184,7 @@ my_mona_client = Client(
     num_of_retries_for_authentication=6,
     wait_time_for_authentication_retries=0,
     should_log_failed_messages=True,
+    filter_none_fields_on_export=True,
 )
 ```
 

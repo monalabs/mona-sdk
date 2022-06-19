@@ -89,6 +89,10 @@ SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
+FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
+    "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
+)
+
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
@@ -175,6 +179,7 @@ class Client:
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
+        filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -223,6 +228,7 @@ class Client:
         self._app_server_url = self._get_app_server_url(
             override_host=override_app_server_host
         )
+        self.filter_none_fields_on_export = filter_none_fields_on_export
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -256,30 +262,58 @@ class Client:
         )
         return decoded_token["tenantId"]
 
+    @staticmethod
+    def filter_none_fields(message):
+        return {key: val for key, val in message.items() if val is not None}
+
+    def should_filter_none_fields(self, filter_none_fields):
+        """
+        Return True is the None fields should be filtered, if the caller function did
+        not provide filter_none_fields use the client's self default.
+        """
+        return (
+            self.filter_none_fields_on_export
+            if filter_none_fields is None
+            else filter_none_fields
+        )
+
     @Decorators.refresh_token_if_needed
-    def export(self, message: MonaSingleMessage):
+    def export(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
 
         :param message: MonaSingleMessage (required)
             message should be a MonaSingleMessage instance, which is a dataclass
             provided in this module.
+        :param filter_none_fields: boolean (optional)
+            When set to true fields with None values will be filtered out from the
+            message dict.
         :return: boolean
             True if the message was successfully sent to Mona's systems,
             False otherwise (failure reason will be logged).
         """
-        export_result = self._export_batch_inner([message])
+        export_result = self._export_batch_inner(
+            [message], filter_none_fields=filter_none_fields
+        )
         return export_result and export_result["failed"] == 0
 
     @Decorators.refresh_token_if_needed
-    def export_batch(self, events: List[MonaSingleMessage], default_action=None):
+    def export_batch(
+        self,
+        events: List[MonaSingleMessage],
+        default_action=None,
+        filter_none_fields=None,
+    ):
         """
         Use this function to easily send a batch of MonaSingleMessage to Mona.
-        :param events: List[MonaSingleMessage]
+        :param events: List[MonaSingleMessage] (required)
             Events should be a list of MonaSingleMessage (provided in this module).
-        :param default_action: str
+        :param default_action: str (optional)
             The default action to the batch. Will be set as the action of all messages
             with no action provided.
+        :param filter_none_fields: boolean (optional)
+            When set to true fields with None values will be filtered out from the
+            message dict.
         :return: dict
             Returns a dict of the following format:
             {
@@ -290,9 +324,16 @@ class Client:
                                   for each message the reason it failed.
             }
         """
-        return self._export_batch_inner(events, default_action)
+        return self._export_batch_inner(
+            events, default_action, filter_none_fields=filter_none_fields
+        )
 
-    def _export_batch_inner(self, events: List[MonaSingleMessage], default_action=None):
+    def _export_batch_inner(
+        self,
+        events: List[MonaSingleMessage],
+        default_action=None,
+        filter_none_fields=None,
+    ):
         events = mona_messages_to_dicts_validation(
             events, self.raise_export_exceptions, self.should_log_failed_messages
         )
@@ -318,6 +359,11 @@ class Client:
             if validate_inner_message_type(message_copy["message"]):
                 # Change fields in message that starts with "MONA_".
                 message_copy["message"] = update_mona_fields_names(
+                    message_copy["message"]
+                )
+
+            if self.should_filter_none_fields(filter_none_fields):
+                message_copy["message"] = self.filter_none_fields(
                     message_copy["message"]
                 )
 
