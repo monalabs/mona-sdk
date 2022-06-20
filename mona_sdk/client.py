@@ -22,11 +22,7 @@ import jwt
 import requests
 from requests.exceptions import ConnectionError
 
-from mona_sdk.client_exceptions import (
-    MonaServiceException,
-    MonaInitializationException,
-)
-from .client_util import get_boolean_value_for_env_var, remove_items_by_value
+from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -35,12 +31,13 @@ from .validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
+from .client_util import remove_items_by_value, get_boolean_value_for_env_var
 from .authentication import (
     Decorators,
     is_authenticated,
     first_authentication,
-    get_current_token_by_api_key,
     get_basic_auth_header,
+    get_current_token_by_api_key,
 )
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
@@ -273,7 +270,6 @@ class Client:
         :return: boolean
             True if the None fields should be filtered, if the caller function did
             not provide filter_none_fields use the client's self default.
-
         """
         return (
             self.filter_none_fields_on_export
