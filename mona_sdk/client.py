@@ -268,8 +268,12 @@ class Client:
 
     def should_filter_none_fields(self, filter_none_fields):
         """
-        Return True is the None fields should be filtered, if the caller function did
-        not provide filter_none_fields use the client's self default.
+        :param filter_none_fields:
+            The value the export function got for filter_none_fields.
+        :return: boolean
+            True if the None fields should be filtered, if the caller function did
+            not provide filter_none_fields use the client's self default.
+
         """
         return (
             self.filter_none_fields_on_export
