@@ -31,7 +31,11 @@ from .validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from .client_util import remove_items_by_value, get_boolean_value_for_env_var
+from .client_util import (
+    remove_items_by_value,
+    get_boolean_value_for_env_var,
+    calculate_normalized_hash,
+)
 from .authentication import (
     Decorators,
     is_authenticated,
@@ -153,6 +157,12 @@ class MonaSingleMessage:
             if key in MonaSingleMessage.__dataclass_fields__.keys()
         }
 
+    def get_context_class(self):
+        return self.contextClass
+
+    def get_context_id(self):
+        return self.contextId
+
 
 class Client:
     """
@@ -161,22 +171,23 @@ class Client:
     """
 
     def __init__(
-        self,
-        api_key=None,
-        secret=None,
-        raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
-        raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
-        raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
-        num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
-        wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
-        should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
-        should_use_ssl=SHOULD_USE_SSL,
-        should_use_authentication=SHOULD_USE_AUTHENTICATION,
-        override_rest_api_full_url=OVERRIDE_REST_API_URL,
-        override_rest_api_host=OVERRIDE_REST_API_HOST,
-        override_app_server_host=OVERRIDE_APP_SERVER_HOST,
-        user_id=None,
-        filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
+            self,
+            api_key=None,
+            secret=None,
+            raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
+            raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
+            raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
+            num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
+            wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
+            should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
+            should_use_ssl=SHOULD_USE_SSL,
+            should_use_authentication=SHOULD_USE_AUTHENTICATION,
+            override_rest_api_full_url=OVERRIDE_REST_API_URL,
+            override_rest_api_host=OVERRIDE_REST_API_HOST,
+            override_app_server_host=OVERRIDE_APP_SERVER_HOST,
+            user_id=None,
+            filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
+            sampling_rate=None,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -219,13 +230,14 @@ class Client:
         # will work.
         self._user_id = user_id or self._get_user_id()
         self._rest_api_url = (
-            override_rest_api_full_url
-            or self._get_rest_api_export_url(override_host=override_rest_api_host)
+                override_rest_api_full_url
+                or self._get_rest_api_export_url(override_host=override_rest_api_host)
         )
         self._app_server_url = self._get_app_server_url(
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
+        self._sampling_rate = sampling_rate if sampling_rate else {}
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -299,10 +311,10 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def export_batch(
-        self,
-        events: List[MonaSingleMessage],
-        default_action=None,
-        filter_none_fields=None,
+            self,
+            events: List[MonaSingleMessage],
+            default_action=None,
+            filter_none_fields=None,
     ):
         """
         Use this function to easily send a batch of MonaSingleMessage to Mona.
@@ -328,11 +340,22 @@ class Client:
             events, default_action, filter_none_fields=filter_none_fields
         )
 
+    def _should_sample_message(self, message):
+        context_class = message.get_context_class()
+        context_class_sampling_rate = self._sampling_rate.get(context_class)
+        if context_class_sampling_rate:
+            context_id = message.get_context_id()
+            context_id_hash_value = calculate_normalized_hash(context_id)
+            return (
+                True if context_id_hash_value < context_class_sampling_rate else False
+            )
+        return True
+
     def _export_batch_inner(
-        self,
-        events: List[MonaSingleMessage],
-        default_action=None,
-        filter_none_fields=None,
+            self,
+            events: List[MonaSingleMessage],
+            default_action=None,
+            filter_none_fields=None,
     ):
         events = mona_messages_to_dicts_validation(
             events, self.raise_export_exceptions, self.should_log_failed_messages
@@ -361,6 +384,9 @@ class Client:
                 message_copy["message"] = update_mona_fields_names(
                     message_copy["message"]
                 )
+
+            if not self._should_sample_message(message_copy):
+                continue
 
             if self.should_filter_none_fields(filter_none_fields):
                 message_copy["message"] = self.filter_none_fields(
@@ -417,8 +443,8 @@ class Client:
 
     @staticmethod
     def _create_client_response(
-        response,
-        total,
+            response,
+            total,
     ):
         """
         Creates the dict response of the client to an export_batch() call.
@@ -522,7 +548,7 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def upload_config_per_context_class(
-        self, author, commit_message, context_class, config
+            self, author, commit_message, context_class, config
     ):
         """
         A wrapper function for "Upload Config per Context Class" REST endpoint. view
@@ -586,10 +612,10 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def validate_config(
-        self,
-        config,
-        list_of_context_ids=UNPROVIDED_VALUE,
-        latest_amount=UNPROVIDED_VALUE,
+            self,
+            config,
+            list_of_context_ids=UNPROVIDED_VALUE,
+            latest_amount=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Validate Config" REST endpoint. view full documentation
@@ -606,14 +632,14 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def get_insights(
-        self,
-        context_class,
-        min_segment_size,
-        insight_types=UNPROVIDED_VALUE,
-        metric_name=UNPROVIDED_VALUE,
-        min_insight_score=UNPROVIDED_VALUE,
-        time_range_seconds=UNPROVIDED_VALUE,
-        first_discovered_on_range_seconds=UNPROVIDED_VALUE,
+            self,
+            context_class,
+            min_segment_size,
+            insight_types=UNPROVIDED_VALUE,
+            metric_name=UNPROVIDED_VALUE,
+            min_insight_score=UNPROVIDED_VALUE,
+            time_range_seconds=UNPROVIDED_VALUE,
+            first_discovered_on_range_seconds=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Insights" REST endpoint. view full
@@ -635,12 +661,12 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def get_ingested_data_for_a_specific_segment(
-        self,
-        context_class,
-        start_time,
-        end_time,
-        segment,
-        excluded_segments=UNPROVIDED_VALUE,
+            self,
+            context_class,
+            start_time,
+            end_time,
+            segment,
+            excluded_segments=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Ingested Data for a Specific Segment" REST
@@ -676,17 +702,17 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def get_aggregated_data_of_a_specific_segment(
-        self,
-        context_class,
-        timestamp_from,
-        timestamp_to,
-        time_series_resolutions=UNPROVIDED_VALUE,
-        with_histogram=UNPROVIDED_VALUE,
-        time_zone=UNPROVIDED_VALUE,
-        metrics=UNPROVIDED_VALUE,
-        requested_segments=UNPROVIDED_VALUE,
-        excluded_segments=UNPROVIDED_VALUE,
-        baseline_segment=UNPROVIDED_VALUE,
+            self,
+            context_class,
+            timestamp_from,
+            timestamp_to,
+            time_series_resolutions=UNPROVIDED_VALUE,
+            with_histogram=UNPROVIDED_VALUE,
+            time_zone=UNPROVIDED_VALUE,
+            metrics=UNPROVIDED_VALUE,
+            requested_segments=UNPROVIDED_VALUE,
+            excluded_segments=UNPROVIDED_VALUE,
+            baseline_segment=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
@@ -711,21 +737,21 @@ class Client:
 
     @Decorators.refresh_token_if_needed
     def get_aggregated_stats_of_a_specific_segmentation(
-        self,
-        context_class,
-        dimension,
-        target_time_range,
-        compared_time_range,
-        metric_1_field,
-        metric_2_field,
-        metric_1_type,
-        metric_2_type,
-        min_segment_size,
-        sort_function,
-        baseline_segment=UNPROVIDED_VALUE,
-        excluded_segments=UNPROVIDED_VALUE,
-        target_segments_filter=UNPROVIDED_VALUE,
-        compared_segments_filter=UNPROVIDED_VALUE,
+            self,
+            context_class,
+            dimension,
+            target_time_range,
+            compared_time_range,
+            metric_1_field,
+            metric_2_field,
+            metric_1_type,
+            metric_2_type,
+            min_segment_size,
+            sort_function,
+            baseline_segment=UNPROVIDED_VALUE,
+            excluded_segments=UNPROVIDED_VALUE,
+            target_segments_filter=UNPROVIDED_VALUE,
+            compared_segments_filter=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
