@@ -110,6 +110,9 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
 # None argument if needed.
 UNPROVIDED_VALUE = "mona_unprovided_value"
 
+CONTEXT_CLASS_FIELD_NAME = "arcClass"
+CONTEXT_ID_FIELD_NAME = "contextId"
+
 
 @dataclass
 class MonaSingleMessage:
@@ -156,12 +159,6 @@ class MonaSingleMessage:
             for key, value in self.__dict__.items()
             if key in MonaSingleMessage.__dataclass_fields__.keys()
         }
-
-    def get_context_class(self):
-        return self.contextClass
-
-    def get_context_id(self):
-        return self.contextId
 
 
 class Client:
@@ -341,13 +338,13 @@ class Client:
         )
 
     def _should_sample_message(self, message):
-        context_class = message.get_context_class()
+        context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
         context_class_sampling_rate = self._sampling_rate.get(context_class)
         if context_class_sampling_rate:
-            context_id = message.get_context_id()
+            context_id = message.get(CONTEXT_ID_FIELD_NAME)
             context_id_hash_value = calculate_normalized_hash(context_id)
             return (
-                True if context_id_hash_value < context_class_sampling_rate else False
+                True if context_id_hash_value <= context_class_sampling_rate else False
             )
         return True
 

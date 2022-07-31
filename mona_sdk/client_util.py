@@ -25,7 +25,7 @@ def remove_items_by_value(data, value_to_remove):
 
 def calculate_normalized_hash(context_id):
     """
-    Calculate a normalized hash of a string id (a fraction between 0 to 1).
+    Calculate a normalized hash of a context id (a fraction between 0 to 1).
     """
     context_id_encoded = context_id.encode("ascii")
     return (
