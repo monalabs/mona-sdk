@@ -135,6 +135,8 @@ class MonaSingleMessage:
             If not supplied, current time is used.
         :param action (str): (Optional) The action to use on the values in the fields of
             this message - "OVERWRITE", "ADD" or "NEW" (default: "OVERWRITE").
+
+
     A new message initialization would look like this:
     message_to_mona = MonaSingleMessage(
         message=<the relevant monitoring information>,
@@ -288,6 +290,7 @@ class Client:
     def export(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
+
         :param message: MonaSingleMessage (required)
             message should be a MonaSingleMessage instance, which is a dataclass
             provided in this module.
