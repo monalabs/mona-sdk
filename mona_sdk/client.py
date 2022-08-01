@@ -184,7 +184,7 @@ class Client:
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
-        sampling_rate=None
+        context_class_to_sampling_rate=None
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -234,7 +234,7 @@ class Client:
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
-        self._sampling_rate = sampling_rate if sampling_rate else {}
+        self._context_class_to_sampling_rate = (context_class_to_sampling_rate if context_class_to_sampling_rate else {})
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -339,7 +339,7 @@ class Client:
 
     def _should_sample_message(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
-        context_class_sampling_rate = self._sampling_rate.get(context_class)
+        context_class_sampling_rate = self._context_class_to_sampling_rate.get(context_class)
         if context_class_sampling_rate:
             context_id = message.get(CONTEXT_ID_FIELD_NAME)
             context_id_hash_value = calculate_normalized_hash(context_id)
