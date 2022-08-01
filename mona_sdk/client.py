@@ -13,8 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
-import logging
 import os
+import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
@@ -33,10 +33,9 @@ from .validation import (
     mona_messages_to_dicts_validation,
 )
 from .client_util import (
-    remove_items_by_value,
-    calculate_normalized_hash,
-    get_boolean_value_for_env_var,
     keep_message_or_not,
+    remove_items_by_value,
+    get_boolean_value_for_env_var,
 )
 from .authentication import (
     Decorators,
@@ -394,7 +393,9 @@ class Client:
                 self._should_sample_data()
                 and not self._should_add_message_to_sampled_data(message_copy)
             ):
-                logging.info(f"{message_event} is not a part of the sampled data.")
+                logging.info(
+                    f"This event isn't a part of the sampled data: {message_event}"
+                )
                 continue
 
             if self.should_filter_none_fields(filter_none_fields):
