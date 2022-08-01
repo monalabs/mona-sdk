@@ -337,18 +337,18 @@ class Client:
             events, default_action, filter_none_fields=filter_none_fields
         )
 
-    def _should_sample_message(self, message):
+    def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
         context_class_sampling_rate = self._context_class_to_sampling_rate.get(
             context_class
         )
-        if context_class_sampling_rate:
-            context_id = message.get(CONTEXT_ID_FIELD_NAME)
-            context_id_hash_value = calculate_normalized_hash(context_id)
-            return (
-                True if context_id_hash_value <= context_class_sampling_rate else False
-            )
+        context_id = message.get(CONTEXT_ID_FIELD_NAME)
+        if context_id and context_class_sampling_rate:
+            return calculate_normalized_hash(context_id) <= context_class_sampling_rate
         return True
+
+    def _should_sample_data(self):
+        return self._context_class_to_sampling_rate
 
     def _export_batch_inner(
         self,
@@ -384,7 +384,10 @@ class Client:
                     message_copy["message"]
                 )
 
-            if not self._should_sample_message(message_copy):
+            if (
+                self._should_sample_data()
+                and not self._should_add_message_to_sampled_data(message_copy)
+            ):
                 continue
 
             if self.should_filter_none_fields(filter_none_fields):
