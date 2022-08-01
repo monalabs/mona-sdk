@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+import logging
 import os
 from json import JSONDecodeError
 from typing import List
@@ -35,6 +36,7 @@ from .client_util import (
     remove_items_by_value,
     calculate_normalized_hash,
     get_boolean_value_for_env_var,
+    keep_message_or_not,
 )
 from .authentication import (
     Decorators,
@@ -110,6 +112,8 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
 # None argument if needed.
 UNPROVIDED_VALUE = "mona_unprovided_value"
 
+# TODO(anat): change the following line once REST-api allows "contextClass"
+#  instead of "arcClass".
 CONTEXT_CLASS_FIELD_NAME = "arcClass"
 CONTEXT_ID_FIELD_NAME = "contextId"
 
@@ -184,6 +188,7 @@ class Client:
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
+        default_sampling_rate=1,
         context_class_to_sampling_rate=None,
     ):
         """
@@ -234,6 +239,7 @@ class Client:
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
+        self._default_sampling_rate = default_sampling_rate
         self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
 
     def _get_rest_api_export_url(self, override_host=None):
@@ -343,12 +349,12 @@ class Client:
             context_class
         )
         context_id = message.get(CONTEXT_ID_FIELD_NAME)
-        if context_id and context_class_sampling_rate:
-            return calculate_normalized_hash(context_id) <= context_class_sampling_rate
-        return True
+        if context_class_sampling_rate:
+            return keep_message_or_not(context_id, context_class_sampling_rate)
+        return keep_message_or_not(context_id, self._default_sampling_rate)
 
     def _should_sample_data(self):
-        return self._context_class_to_sampling_rate
+        return (self._default_sampling_rate < 1) or self._context_class_to_sampling_rate
 
     def _export_batch_inner(
         self,
@@ -375,7 +381,7 @@ class Client:
 
             # TODO(anat): remove the following line once REST-api allows "contextClass"
             #  instead of "arcClass".
-            message_copy["arcClass"] = message_copy.pop("contextClass")
+            message_copy[CONTEXT_CLASS_FIELD_NAME] = message_copy.pop("contextClass")
 
             # TODO(anat): Add full validations on client side.
             if validate_inner_message_type(message_copy["message"]):
@@ -388,6 +394,7 @@ class Client:
                 self._should_sample_data()
                 and not self._should_add_message_to_sampled_data(message_copy)
             ):
+                logging.info(f"{message_event} is not a part of the sampled data.")
                 continue
 
             if self.should_filter_none_fields(filter_none_fields):
