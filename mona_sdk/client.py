@@ -14,6 +14,7 @@
 #    limitations under the License.
 # ----------------------------------------------------------------------------
 import os
+import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
@@ -31,7 +32,11 @@ from .validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from .client_util import remove_items_by_value, get_boolean_value_for_env_var
+from .client_util import (
+    keep_message_after_sampling,
+    remove_items_by_value,
+    get_boolean_value_for_env_var,
+)
 from .authentication import (
     Decorators,
     is_authenticated,
@@ -106,6 +111,11 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
 # None argument if needed.
 UNPROVIDED_VALUE = "mona_unprovided_value"
 
+# TODO(anat): change the following line once REST-api allows "contextClass"
+#  instead of "arcClass".
+CONTEXT_CLASS_FIELD_NAME = "arcClass"
+CONTEXT_ID_FIELD_NAME = "contextId"
+
 
 @dataclass
 class MonaSingleMessage:
@@ -177,6 +187,8 @@ class Client:
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
+        default_sampling_rate=1,
+        context_class_to_sampling_rate=None,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -226,6 +238,8 @@ class Client:
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
+        self._default_sampling_rate = default_sampling_rate
+        self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -328,6 +342,19 @@ class Client:
             events, default_action, filter_none_fields=filter_none_fields
         )
 
+    def _should_add_message_to_sampled_data(self, message):
+        context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
+        context_class_sampling_rate = self._context_class_to_sampling_rate.get(
+            context_class
+        )
+        context_id = message.get(CONTEXT_ID_FIELD_NAME)
+        if context_class_sampling_rate:
+            return keep_message_after_sampling(context_id, context_class_sampling_rate)
+        return keep_message_after_sampling(context_id, self._default_sampling_rate)
+
+    def _should_sample_data(self):
+        return (self._default_sampling_rate < 1) or self._context_class_to_sampling_rate
+
     def _export_batch_inner(
         self,
         events: List[MonaSingleMessage],
@@ -353,7 +380,7 @@ class Client:
 
             # TODO(anat): remove the following line once REST-api allows "contextClass"
             #  instead of "arcClass".
-            message_copy["arcClass"] = message_copy.pop("contextClass")
+            message_copy[CONTEXT_CLASS_FIELD_NAME] = message_copy.pop("contextClass")
 
             # TODO(anat): Add full validations on client side.
             if validate_inner_message_type(message_copy["message"]):
@@ -361,6 +388,15 @@ class Client:
                 message_copy["message"] = update_mona_fields_names(
                     message_copy["message"]
                 )
+
+            if (
+                self._should_sample_data()
+                and not self._should_add_message_to_sampled_data(message_copy)
+            ):
+                logging.info(
+                    f"This event isn't a part of the sampled data: {message_event}"
+                )
+                continue
 
             if self.should_filter_none_fields(filter_none_fields):
                 message_copy["message"] = self.filter_none_fields(
