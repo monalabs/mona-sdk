@@ -37,7 +37,7 @@ def _calculate_normalized_hash(context_id):
     ) / NORMALIZED_HASH_PRECISION
 
 
-def keep_message_or_not(context_id, sampling_rate):
+def keep_message_after_sampling(context_id, sampling_rate):
     if context_id:
         return _calculate_normalized_hash(context_id) <= sampling_rate
     else:

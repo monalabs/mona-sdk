@@ -33,7 +33,7 @@ from .validation import (
     mona_messages_to_dicts_validation,
 )
 from .client_util import (
-    keep_message_or_not,
+    keep_message_after_sampling,
     remove_items_by_value,
     get_boolean_value_for_env_var,
 )
@@ -349,8 +349,8 @@ class Client:
         )
         context_id = message.get(CONTEXT_ID_FIELD_NAME)
         if context_class_sampling_rate:
-            return keep_message_or_not(context_id, context_class_sampling_rate)
-        return keep_message_or_not(context_id, self._default_sampling_rate)
+            return keep_message_after_sampling(context_id, context_class_sampling_rate)
+        return keep_message_after_sampling(context_id, self._default_sampling_rate)
 
     def _should_sample_data(self):
         return (self._default_sampling_rate < 1) or self._context_class_to_sampling_rate
