@@ -1,6 +1,6 @@
 # Mona Python SDK
 <p align="center">
-  <img src="https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true" alt="Mona's logo" width="220"/>
+  <img src="https://github.com/monalabs/mona-sdk/blob/main/mona_logo.png?raw=true" alt="Mona's logo" width="180"/>
 </p>
 
 
