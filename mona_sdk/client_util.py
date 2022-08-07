@@ -1,6 +1,10 @@
 import os
-import hashlib
+import json
 import random
+import hashlib
+from json import JSONDecodeError
+
+from mona_sdk.client_exceptions import MonaInitializationException
 
 NORMALIZED_HASH_DECIMAL_DIGITS = 7
 NORMALIZED_HASH_PRECISION = 10 ** NORMALIZED_HASH_DECIMAL_DIGITS
@@ -10,6 +14,34 @@ def get_boolean_value_for_env_var(env_var, default_value):
     return {"True": True, "true": True, "False": False, "false": False}.get(
         os.environ.get(env_var), default_value
     )
+
+
+def get_dict_value_for_env_var(env_var, cast_values=None, default_value=None):
+    """
+    Expects a valid json string (or empty). cast_values allows to cast (and verify
+    success of casting) all values to the given type.
+    """
+    value = os.environ.get(env_var)
+    if not value:
+        return default_value
+    try:
+        config = json.loads(value)
+        if type(config) is not dict:
+            raise MonaInitializationException(
+                f'Env ${env_var} isn\'t a valid json *Object*. Received: "${value}"'
+            )
+        if cast_values:
+            for key in config:
+                config[key] = cast_values(config[key])
+        return config
+    except JSONDecodeError:
+        raise MonaInitializationException(
+            f'Env ${env_var} must be a valid json string. Received: "${value}"'
+        )
+    except ValueError:
+        raise MonaInitializationException(
+            f"Env {env_var} object values must be of type ${cast_values}."
+        )
 
 
 def is_dict_contains_fields(message_event, required_fields):

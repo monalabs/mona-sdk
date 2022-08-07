@@ -172,6 +172,8 @@ Mona uses several environment variables you can set as you prefer:
   from the message dict to export (default value: False). Note that passing a None value may be required in order to delete a pre-existing 
   value. To allow None values, use filter_none_fields=False which overrides this parameter both in export() and 
   export_batch() functions.
+- MONA_SDK_DEFAULT_SAMPLING_FACTOR - A float in the range [0, 1], which sets the random client-side sampling done by the SDK before sending the data into Mona servers. If this value is less than 1, only a random** sample of the given proportion is actually going to be sent, leaving the rest of the data unattended. Use with caution. (random** - using hashing with sha224 on the context id, if supplied, or by random.random() otherwise.)
+- MONA_SDK_SAMPLING_CONFIG - Allows to override the sampling factor (see MONA_SDK_DEFAULT_SAMPLING_FACTOR above) by context class. If set, the expected format is a *valid* JSON-object string. Keys are the names of the context classes to override, and the value is expected to be floats in the range of [0, 1]. For example: '{"class1": 0.3, "class2": 0.5, "class3": 1}'
 
 Another way to control these behaviors is to pass the relevant arguments to the client 
 constructor as follows (the environment variables are used as defaults for these arguments, and by passing these 
@@ -187,6 +189,8 @@ my_mona_client = Client(
     wait_time_for_authentication_retries=0,
     should_log_failed_messages=True,
     filter_none_fields_on_export=True,
+    default_sampling_rate=0.1,
+    context_class_to_sampling_rate={"class1": 0.5, "class2": 1},
 )
 ```
 
