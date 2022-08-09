@@ -28,7 +28,7 @@ def get_dict_value_for_env_var(env_var, cast_values=None, default_value=None):
         config = json.loads(value)
         if type(config) is not dict:
             raise MonaInitializationException(
-                f'Env ${env_var} isn\'t a valid json *Object*. Received: "${value}"'
+                f'Env {env_var} isn\'t a valid json *Object*. Received: "{value}"'
             )
         if cast_values:
             for key in config:
@@ -36,11 +36,11 @@ def get_dict_value_for_env_var(env_var, cast_values=None, default_value=None):
         return config
     except JSONDecodeError:
         raise MonaInitializationException(
-            f'Env ${env_var} must be a valid json string. Received: "${value}"'
+            f'Env {env_var} must be a valid json string. Received: "{value}"'
         )
     except ValueError:
         raise MonaInitializationException(
-            f"Env {env_var} object values must be of type ${cast_values}."
+            f"Env {env_var} object values must be of type {cast_values}."
         )
 
 
