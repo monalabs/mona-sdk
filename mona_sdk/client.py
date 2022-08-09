@@ -33,8 +33,9 @@ from .validation import (
     mona_messages_to_dicts_validation,
 )
 from .client_util import (
-    keep_message_after_sampling,
     remove_items_by_value,
+    get_dict_value_for_env_var,
+    keep_message_after_sampling,
     get_boolean_value_for_env_var,
 )
 from .authentication import (
@@ -93,6 +94,17 @@ SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
 
 FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
     "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
+)
+
+# SDK will randomly sample the sent data using this factor and disregard the sampled-
+# out data, unless the sent data is set on a class overridden by
+# MONA_SDK_SAMPLING_CONFIG.
+DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
+
+# When set, SDK will randomly sample the sent data for any class keyed in the config.
+# See readme for more details.
+SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
+    "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
@@ -187,8 +199,8 @@ class Client:
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
-        default_sampling_rate=1,
-        context_class_to_sampling_rate=None,
+        default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
+        context_class_to_sampling_rate=SAMPLING_CONFIGURATION_DICT,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
