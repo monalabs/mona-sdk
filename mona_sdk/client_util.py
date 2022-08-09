@@ -73,5 +73,5 @@ def keep_message_after_sampling(context_id, sampling_rate):
     if context_id:
         return _calculate_normalized_hash(context_id) <= sampling_rate
     else:
-        # TODO(Nemo): Allow getting seed from the user.for random.randmo().
+        # TODO(Nemo): Allow getting seed from the user for random.random().
         return random.random() <= sampling_rate
