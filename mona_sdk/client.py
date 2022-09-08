@@ -287,10 +287,9 @@ class Client:
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self, override_host=None):
-        # http_protocol = "https" if self.should_use_ssl else "http"
-        # host_name = override_host or f"api{self._user_id}.monalabs.io"
-        # return f"{http_protocol}://{host_name}"
-        return "http://local.monalabs.io:5000/"
+        http_protocol = "https" if self.should_use_ssl else "http"
+        host_name = override_host or f"api{self._user_id}.monalabs.io"
+        return f"{http_protocol}://{host_name}"
 
     def is_active(self):
         """
