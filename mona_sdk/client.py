@@ -266,17 +266,19 @@ class Client:
 
         sampling_config = {}
 
-        # If sampling_config_name was provided, the client will be initiated with the
-        # sampling map saved to the index and the mapped default factor.
         if self._sampling_config_name:
             sampling_config_list = self.get_sampling_factors()
             if sampling_config_list:
                 sampling_config = sampling_config_list[0]
 
+        # If sampling_config_name was provided, the client will be initiated with the
+        # mapped default factor, if exists. Otherwise, the default sampling will apply.
         self._default_sampling_rate = (
             sampling_config.get("default_factor") or default_sampling_rate
         )
 
+        # If sampling_config_name was provided, the client will be initiated with the
+        # sampling map saved to the index, or an empty dict.
         self._context_class_to_sampling_rate = (
             sampling_config.get("factors_map") or context_class_to_sampling_rate
         )
