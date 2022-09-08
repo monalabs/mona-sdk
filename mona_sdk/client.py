@@ -103,8 +103,8 @@ DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
-SAMPLING_CONFIGURATION_DICT = (
-    get_dict_value_for_env_var("MONA_SDK_SAMPLING_CONFIG", cast_values=float) or {}
+SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
+    "MONA_SDK_SAMPLING_CONFIG", cast_values=float, default_value={}
 )
 
 SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
@@ -264,13 +264,14 @@ class Client:
 
         self._sampling_config_name = sampling_config_name
 
-        sampling_config_list = (
-            self.get_sampling_factors() if sampling_config_name else []
-        )
-        sampling_config = sampling_config_list[0] if sampling_config_list else {}
+        sampling_config = {}
 
         # If sampling_config_name was provided, the client will be initiated with the
         # sampling map saved to the index and the mapped default factor.
+        if self._sampling_config_name:
+            sampling_config_list = self.get_sampling_factors()
+            if sampling_config_list:
+                sampling_config = sampling_config_list[0]
 
         self._default_sampling_rate = (
             sampling_config.get("default_factor") or default_sampling_rate
@@ -663,6 +664,17 @@ class Client:
     def get_sampling_factors(self):
         """
         A wrapper function for "Get sampling factors" REST endpoint.
+        The response will include a list of sampling config names, with their sampling
+        map and default sampling factor, in the following format:
+        [{
+            "config_name": "Training",
+            "factors_map": {
+                "TEST": 0.5,
+            },
+            "default_factor": 0.1,
+        }]
+        When the client is initiated with a config name, only the matching config
+        details will be returned (if exists).
         """
         return self._app_server_request(
             "get_sampling_factors",
