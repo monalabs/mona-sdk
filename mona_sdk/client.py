@@ -644,20 +644,28 @@ class Client:
         return self._app_server_request(
             "get_sampling_factors",
             data={"config_name": self._sampling_config_name},
-        )
+        )["response_data"]
 
     @Decorators.refresh_token_if_needed
     def create_sampling_factor(self, sampling_factor, context_class=None):
         """
         A wrapper function for "Create sampling factor" REST endpoint.
         """
-        return self._app_server_request(
+        response = self._app_server_request(
             "create_sampling_factor",
             data={
                 "config_name": self._sampling_config_name,
                 "sampling_factor": sampling_factor,
                 "context_class": context_class,
             },
+        )
+
+        error_message = response["error_message"]
+
+        return (
+            f"Failed to create sampling factor: {error_message}"
+            if error_message
+            else "Sampling factor created successfully."
         )
 
     def validate_config(
