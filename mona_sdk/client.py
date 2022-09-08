@@ -103,8 +103,8 @@ DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
-SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
-    "MONA_SDK_SAMPLING_CONFIG", cast_values=float
+SAMPLING_CONFIGURATION_DICT = (
+    get_dict_value_for_env_var("MONA_SDK_SAMPLING_CONFIG", cast_values=float) or {}
 )
 
 SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
@@ -264,20 +264,21 @@ class Client:
 
         self._sampling_config_name = sampling_config_name
 
-        if sampling_config_name:
-            sampling_config_list = self.get_sampling_factors()
-            sampling_config = sampling_config_list[0] if sampling_config_list else {}
+        sampling_config_list = (
+            self.get_sampling_factors() if sampling_config_name else []
+        )
+        sampling_config = sampling_config_list[0] if sampling_config_list else {}
 
-            self._default_sampling_rate = (
-                sampling_config.get("default_factor") or default_sampling_rate
-            )
-            self._context_class_to_sampling_rate = sampling_config.get("factors_map")
+        # If sampling_config_name was provided, the client will be initiated with the
+        # sampling map saved to the index and the mapped default factor.
 
-        else:
-            self._default_sampling_rate = default_sampling_rate
-            self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
+        self._default_sampling_rate = (
+            sampling_config.get("default_factor") or default_sampling_rate
+        )
 
-        print(self._context_class_to_sampling_rate, self._default_sampling_rate)
+        self._context_class_to_sampling_rate = (
+            sampling_config.get("factors_map") or context_class_to_sampling_rate
+        )
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -286,9 +287,10 @@ class Client:
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self, override_host=None):
-        http_protocol = "https" if self.should_use_ssl else "http"
-        host_name = override_host or f"api{self._user_id}.monalabs.io"
-        return f"{http_protocol}://{host_name}"
+        # http_protocol = "https" if self.should_use_ssl else "http"
+        # host_name = override_host or f"api{self._user_id}.monalabs.io"
+        # return f"{http_protocol}://{host_name}"
+        return "http://local.monalabs.io:5000/"
 
     def is_active(self):
         """
