@@ -273,14 +273,14 @@ class Client:
 
         # If sampling_config_name was provided, the client will be initiated with the
         # mapped default factor, if exists. Otherwise, the default sampling will apply.
-        self._default_sampling_rate = (
-            sampling_config.get("default_factor") or default_sampling_rate
+        self._default_sampling_rate = sampling_config.get(
+            "default_factor", default_sampling_rate
         )
 
         # If sampling_config_name was provided, the client will be initiated with the
         # sampling map saved to the index, or an empty dict.
-        self._context_class_to_sampling_rate = (
-            sampling_config.get("factors_map") or context_class_to_sampling_rate
+        self._context_class_to_sampling_rate = sampling_config.get(
+            "factors_map", context_class_to_sampling_rate
         )
 
     def _get_rest_api_export_url(self, override_host=None):
