@@ -107,6 +107,8 @@ SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
+SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
+
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid."
@@ -201,6 +203,7 @@ class Client:
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIGURATION_DICT,
+        sampling_config_name=SAMPLING_CONFIG_NAME,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -252,6 +255,7 @@ class Client:
         self.filter_none_fields_on_export = filter_none_fields_on_export
         self._default_sampling_rate = default_sampling_rate
         self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
+        self._sampling_config_name = sampling_config_name
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -633,6 +637,29 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
+    def get_sampling_factors(self):
+        """
+        A wrapper function for "Get sampling factors" REST endpoint.
+        """
+        return self._app_server_request(
+            "get_sampling_factors",
+            data={"config_name": self._sampling_config_name},
+        )
+
+    @Decorators.refresh_token_if_needed
+    def create_sampling_factor(self, sampling_factor, context_class=None):
+        """
+        A wrapper function for "Create sampling factor" REST endpoint.
+        """
+        return self._app_server_request(
+            "create_sampling_factor",
+            data={
+                "config_name": self._sampling_config_name,
+                "sampling_factor": sampling_factor,
+                "context_class": context_class,
+            },
+        )
+
     def validate_config(
         self,
         config,
