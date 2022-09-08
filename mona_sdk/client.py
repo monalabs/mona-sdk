@@ -217,6 +217,12 @@ class Client:
                 "provided."
             )
 
+        if sampling_config_name and context_class_to_sampling_rate:
+            raise MonaInitializationException(
+                "Only one sampling method can be used at a time. Either remove "
+                "sampling_config_name or context_class_to_sampling_rate"
+            )
+
         self._logger = get_logger()
 
         self.api_key = api_key
@@ -253,9 +259,25 @@ class Client:
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
-        self._default_sampling_rate = default_sampling_rate
-        self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
+
+        # Data sampling.
+
         self._sampling_config_name = sampling_config_name
+
+        if sampling_config_name:
+            sampling_config_list = self.get_sampling_factors()
+            sampling_config = sampling_config_list[0] if sampling_config_list else {}
+
+            self._default_sampling_rate = (
+                sampling_config.get("default_factor") or default_sampling_rate
+            )
+            self._context_class_to_sampling_rate = sampling_config.get("factors_map")
+
+        else:
+            self._default_sampling_rate = default_sampling_rate
+            self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
+
+        print(self._context_class_to_sampling_rate, self._default_sampling_rate)
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
