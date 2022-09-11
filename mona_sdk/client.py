@@ -683,7 +683,7 @@ class Client:
         """
         return self._app_server_request(
             "get_sampling_factors",
-            data={"config_name": self._sampling_config_name},
+            data={"config_name": self.sampling_config_name},
         )["response_data"]
 
     @Decorators.refresh_token_if_needed
@@ -913,8 +913,7 @@ class Client:
         """
         try:
             app_server_response = requests.post(
-                f"http://local.monalabs.io:5000/{endpoint_name}",
-                # f"{self._app_server_url}/{endpoint_name}",
+                f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
