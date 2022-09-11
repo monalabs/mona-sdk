@@ -104,7 +104,7 @@ DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
 SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
-    "MONA_SDK_SAMPLING_CONFIG", cast_values=float, default_value={}
+    "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
 SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
@@ -280,7 +280,7 @@ class Client:
         # If sampling_config_name was provided, the client will be initiated with the
         # sampling map saved to the index, or an empty dict.
         self._context_class_to_sampling_rate = sampling_config.get(
-            "factors_map", context_class_to_sampling_rate
+            "factors_map", context_class_to_sampling_rate or {}
         )
 
     def _get_rest_api_export_url(self, override_host=None):
