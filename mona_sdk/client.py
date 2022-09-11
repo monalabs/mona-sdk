@@ -18,6 +18,7 @@ import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
+from cachetools import TTLCache, cached
 
 import jwt
 import requests
@@ -39,12 +40,14 @@ from .client_util import (
     get_boolean_value_for_env_var,
 )
 from .authentication import (
-    Decorators,
     is_authenticated,
     first_authentication,
     get_basic_auth_header,
     get_current_token_by_api_key,
 )
+from .decorators import Decorators
+
+SAMPLING_FACTORS_MAX_AGE_SECONDS = 300
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -262,26 +265,23 @@ class Client:
 
         # Data sampling.
 
-        self._sampling_config_name = sampling_config_name
+        self.sampling_config_name = sampling_config_name
+        self.context_class_to_sampling_rate = context_class_to_sampling_rate
+        self.default_sampling_rate = default_sampling_rate
 
-        sampling_config = {}
-
-        if self._sampling_config_name:
+        if self.sampling_config_name:
             sampling_config_list = self.get_sampling_factors()
-            if sampling_config_list:
+            try:
                 sampling_config = sampling_config_list[0]
+            except IndexError:
+                raise MonaInitializationException("Config name does not exist.")
 
-        # If sampling_config_name was provided, the client will be initiated with the
-        # mapped default factor, if exists. Otherwise, the default sampling will apply.
-        self._default_sampling_rate = sampling_config.get(
-            "default_factor", default_sampling_rate
-        )
-
-        # If sampling_config_name was provided, the client will be initiated with the
-        # sampling map saved to the index, or an empty dict.
-        self._context_class_to_sampling_rate = sampling_config.get(
-            "factors_map", context_class_to_sampling_rate or {}
-        )
+            self.context_class_to_sampling_rate = sampling_config.get(
+                "factors_map", {}
+            )
+            self.default_sampling_rate = sampling_config.get(
+                "default_factor", default_sampling_rate
+            )
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -334,6 +334,7 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
+    @Decorators.update_sampling_factors_if_needed
     def export(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
@@ -354,6 +355,7 @@ class Client:
         return export_result and export_result["failed"] == 0
 
     @Decorators.refresh_token_if_needed
+    @Decorators.update_sampling_factors_if_needed
     def export_batch(
         self,
         events: List[MonaSingleMessage],
@@ -386,16 +388,16 @@ class Client:
 
     def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
-        context_class_sampling_rate = self._context_class_to_sampling_rate.get(
+        context_class_sampling_rate = self.context_class_to_sampling_rate.get(
             context_class
         )
         context_id = message.get(CONTEXT_ID_FIELD_NAME)
         if context_class_sampling_rate:
             return keep_message_after_sampling(context_id, context_class_sampling_rate)
-        return keep_message_after_sampling(context_id, self._default_sampling_rate)
+        return keep_message_after_sampling(context_id, self.default_sampling_rate)
 
     def _should_sample_data(self):
-        return (self._default_sampling_rate < 1) or self._context_class_to_sampling_rate
+        return (self.default_sampling_rate < 1) or self.context_class_to_sampling_rate
 
     def _export_batch_inner(
         self,
@@ -662,6 +664,7 @@ class Client:
             "get_config_history", data={"number_of_revisions": number_of_revisions}
         )
 
+    @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     @Decorators.refresh_token_if_needed
     def get_sampling_factors(self):
         """
@@ -684,14 +687,14 @@ class Client:
         )["response_data"]
 
     @Decorators.refresh_token_if_needed
-    def create_sampling_factor(self, sampling_factor, context_class=None):
+    def create_sampling_factor(self, config_name, sampling_factor, context_class=None):
         """
         A wrapper function for "Create sampling factor" REST endpoint.
         """
         response = self._app_server_request(
             "create_sampling_factor",
             data={
-                "config_name": self._sampling_config_name,
+                "config_name": config_name,
                 "sampling_factor": sampling_factor,
                 "context_class": context_class,
             },
@@ -910,7 +913,8 @@ class Client:
         """
         try:
             app_server_response = requests.post(
-                f"{self._app_server_url}/{endpoint_name}",
+                f"http://local.monalabs.io:5000/{endpoint_name}",
+                # f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
