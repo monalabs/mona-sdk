@@ -265,19 +265,19 @@ class Client:
 
         # Data sampling.
 
-        self.sampling_config_name = sampling_config_name
-        self.context_class_to_sampling_rate = context_class_to_sampling_rate
-        self.default_sampling_rate = default_sampling_rate
+        self._sampling_config_name = sampling_config_name
+        self._context_class_to_sampling_rate = context_class_to_sampling_rate
+        self._default_sampling_rate = default_sampling_rate
 
-        if self.sampling_config_name:
+        if self._sampling_config_name:
             sampling_config_list = self.get_sampling_factors()
             try:
                 sampling_config = sampling_config_list[0]
             except IndexError:
                 raise MonaInitializationException("Config name does not exist.")
 
-            self.context_class_to_sampling_rate = sampling_config.get("factors_map", {})
-            self.default_sampling_rate = sampling_config.get(
+            self._context_class_to_sampling_rate = sampling_config.get("factors_map", {})
+            self._default_sampling_rate = sampling_config.get(
                 "default_factor", default_sampling_rate
             )
 
@@ -384,16 +384,16 @@ class Client:
 
     def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
-        context_class_sampling_rate = self.context_class_to_sampling_rate.get(
+        context_class_sampling_rate = self._context_class_to_sampling_rate.get(
             context_class
         )
         context_id = message.get(CONTEXT_ID_FIELD_NAME)
         if context_class_sampling_rate:
             return keep_message_after_sampling(context_id, context_class_sampling_rate)
-        return keep_message_after_sampling(context_id, self.default_sampling_rate)
+        return keep_message_after_sampling(context_id, self._default_sampling_rate)
 
     def _should_sample_data(self):
-        return (self.default_sampling_rate < 1) or self.context_class_to_sampling_rate
+        return (self._default_sampling_rate < 1) or self._context_class_to_sampling_rate
 
     def _export_batch_inner(
         self,
@@ -668,7 +668,7 @@ class Client:
         configuration was changed since the default factor and sampling map was
         assigned, and if so, update the client vars accordingly.
         """
-        if self.sampling_config_name:
+        if self._sampling_config_name:
             # Refetch the updated config from the index (if the response is not cached).
             sampling_config = self.get_sampling_factors()[0]
             default_from_index = sampling_config.get("default_factor")
@@ -676,21 +676,21 @@ class Client:
 
             if (
                 default_from_index is not None
-                and default_from_index != self.default_sampling_rate
+                and default_from_index != self._default_sampling_rate
             ):
                 logging.info(
                     f"The default sampling factor was updated: {default_from_index}"
                 )
-                self.default_sampling_rate = default_from_index
+                self._default_sampling_rate = default_from_index
 
             if (
                 factors_map_from_index
-                and factors_map_from_index != self.context_class_to_sampling_rate
+                and factors_map_from_index != self._context_class_to_sampling_rate
             ):
                 logging.info(
                     f"The sampling factors map was updated: {factors_map_from_index}"
                 )
-                self.context_class_to_sampling_rate = factors_map_from_index
+                self._context_class_to_sampling_rate = factors_map_from_index
 
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     @Decorators.refresh_token_if_needed
@@ -711,7 +711,7 @@ class Client:
         """
         return self._app_server_request(
             "get_sampling_factors",
-            data={"config_name": self.sampling_config_name},
+            data={"config_name": self._sampling_config_name},
         )["response_data"]
 
     @Decorators.refresh_token_if_needed
