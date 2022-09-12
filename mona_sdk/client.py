@@ -266,7 +266,7 @@ class Client:
         # Data sampling.
 
         self._sampling_config_name = sampling_config_name
-        self._context_class_to_sampling_rate = context_class_to_sampling_rate
+        self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
         self._default_sampling_rate = default_sampling_rate
 
         if self._sampling_config_name:
