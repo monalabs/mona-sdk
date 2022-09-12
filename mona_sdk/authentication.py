@@ -31,6 +31,7 @@ from .client_exceptions import MonaAuthenticationException
 
 from functools import wraps
 
+
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
 # time to refresh the token before it expires (i.e. - in case
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
@@ -243,7 +244,7 @@ def _calculate_and_set_time_to_refresh(api_key):
         )
 
 
-def handle_authentications_error(
+def _handle_authentications_error(
     error_message, should_raise_exception, message_to_log=None
 ):
     """
@@ -258,7 +259,7 @@ def handle_authentications_error(
     return False
 
 
-def should_refresh_token(api_key):
+def _should_refresh_token(api_key):
     """
     :return: True if the token has expired, or is about to expire in
     REFRESH_TOKEN_SAFETY_MARGIN hours or less, False otherwise.
@@ -268,7 +269,7 @@ def should_refresh_token(api_key):
     )
 
 
-def refresh_token(mona_client):
+def _refresh_token(mona_client):
     """
     Gets a new token and sets the needed fields.
     """
@@ -335,21 +336,21 @@ class Decorators(object):
             message_to_log = args[1] if should_log_args else None
 
             if not is_authenticated(mona_client.api_key):
-                return handle_authentications_error(
+                return _handle_authentications_error(
                     "Mona's client is not authenticated",
                     mona_client.raise_authentication_exceptions,
                     message_to_log,
                 )
 
-            if should_refresh_token(mona_client.api_key):
+            if _should_refresh_token(mona_client.api_key):
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
-                    if should_refresh_token(mona_client.api_key):
-                        refresh_token_response = refresh_token(mona_client)
+                    if _should_refresh_token(mona_client.api_key):
+                        refresh_token_response = _refresh_token(mona_client)
                         if not refresh_token_response.ok:
                             # TODO(anat): Check if the current token is still valid to
                             #   call the function anyway.
-                            return handle_authentications_error(
+                            return _handle_authentications_error(
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
                                 mona_client.raise_authentication_exceptions,
