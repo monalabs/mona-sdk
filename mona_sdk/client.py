@@ -403,6 +403,8 @@ class Client:
         default_action=None,
         filter_none_fields=None,
     ):
+        self._update_sampling_factors_if_needed()
+
         events = mona_messages_to_dicts_validation(
             events, self.raise_export_exceptions, self.should_log_failed_messages
         )
@@ -411,8 +413,6 @@ class Client:
 
         messages_to_send = []
         for message_event in events:
-            self._update_sampling_factors_if_needed()
-
             if not validate_mona_single_message(message_event):
                 return handle_export_error(
                     "Messages to export must be of MonaSingleMessage type.",
