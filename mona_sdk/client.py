@@ -276,9 +276,7 @@ class Client:
             except IndexError:
                 raise MonaInitializationException("Config name does not exist.")
 
-            self.context_class_to_sampling_rate = sampling_config.get(
-                "factors_map", {}
-            )
+            self.context_class_to_sampling_rate = sampling_config.get("factors_map", {})
             self.default_sampling_rate = sampling_config.get(
                 "default_factor", default_sampling_rate
             )
@@ -334,7 +332,6 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
-    @Decorators.update_sampling_factors_if_needed
     def export(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
@@ -355,7 +352,6 @@ class Client:
         return export_result and export_result["failed"] == 0
 
     @Decorators.refresh_token_if_needed
-    @Decorators.update_sampling_factors_if_needed
     def export_batch(
         self,
         events: List[MonaSingleMessage],
@@ -399,6 +395,34 @@ class Client:
     def _should_sample_data(self):
         return (self.default_sampling_rate < 1) or self.context_class_to_sampling_rate
 
+    def _update_sampling_factors_if_needed(self):
+        if self.sampling_config_name:
+            # Refetch the updated config from the index (if the response is not cached).
+            sampling_config = self.get_sampling_factors()[0]
+            default_from_index = sampling_config.get("default_factor")
+            factors_map_from_index = sampling_config.get("factors_map")
+
+            # If the factors map or the default was changed, update the client
+            # accordingly.
+
+            if (
+                default_from_index is not None
+                and default_from_index != self.default_sampling_rate
+            ):
+                logging.info(
+                    f"The default sampling factor was updated: {default_from_index}"
+                )
+                self.default_sampling_rate = default_from_index
+
+            if (
+                factors_map_from_index
+                and factors_map_from_index != self.context_class_to_sampling_rate
+            ):
+                logging.info(
+                    f"The sampling factors map was updated: {factors_map_from_index}"
+                )
+                self.context_class_to_sampling_rate = factors_map_from_index
+
     def _export_batch_inner(
         self,
         events: List[MonaSingleMessage],
@@ -413,6 +437,8 @@ class Client:
 
         messages_to_send = []
         for message_event in events:
+            self._update_sampling_factors_if_needed()
+
             if not validate_mona_single_message(message_event):
                 return handle_export_error(
                     "Messages to export must be of MonaSingleMessage type.",
@@ -913,7 +939,8 @@ class Client:
         """
         try:
             app_server_response = requests.post(
-                f"{self._app_server_url}/{endpoint_name}",
+                f"http://local.monalabs.io:5000/{endpoint_name}",
+                # f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
