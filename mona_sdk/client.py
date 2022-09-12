@@ -47,8 +47,6 @@ from .authentication import (
     get_current_token_by_api_key,
 )
 
-SAMPLING_FACTORS_MAX_AGE_SECONDS = 300
-
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
 # Use client.is_active() in order to check authentication status.
@@ -111,6 +109,10 @@ SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
 )
 
 SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
+
+SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
+    "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
+)
 
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
 UPLOAD_CONFIG_ERROR_MESSAGE = (
@@ -270,16 +272,17 @@ class Client:
         self._default_sampling_rate = default_sampling_rate
 
         if self._sampling_config_name:
-            sampling_config_list = self.get_sampling_factors()
-            try:
-                sampling_config = sampling_config_list[0]
-            except IndexError:
+            sampling_factors_list = self.get_sampling_factors()
+
+            if not sampling_factors_list:
                 raise MonaInitializationException("Config name does not exist.")
 
-            self._context_class_to_sampling_rate = sampling_config.get(
-                "factors_map", {}
+            self._latest_seen_sampling_config = sampling_factors_list[0]
+
+            self._context_class_to_sampling_rate = (
+                self._latest_seen_sampling_config.get("factors_map", {})
             )
-            self._default_sampling_rate = sampling_config.get(
+            self._default_sampling_rate = self._latest_seen_sampling_config.get(
                 "default_factor", default_sampling_rate
             )
 
@@ -664,37 +667,44 @@ class Client:
             "get_config_history", data={"number_of_revisions": number_of_revisions}
         )
 
+    @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     def _update_sampling_factors_if_needed(self):
         """
         If the client was initiated with a sampling config name, check if the
         configuration was changed since the client vars were assigned, and if so, update
         them accordingly.
         """
-        if self._sampling_config_name:
-            # Refetch the updated config from the index (if the response is not cached).
-            sampling_config = self.get_sampling_factors()[0]
-            default_from_index = sampling_config.get("default_factor")
-            factors_map_from_index = sampling_config.get("factors_map")
+        if not self._sampling_config_name:
+            return
 
-            if (
-                default_from_index is not None
-                and default_from_index != self._default_sampling_rate
-            ):
-                logging.info(
-                    f"The default sampling factor was updated: {default_from_index}"
-                )
-                self._default_sampling_rate = default_from_index
+        # Refetch the updated config from the index.
+        sampling_config = self.get_sampling_factors()[0]
 
-            if (
-                factors_map_from_index
-                and factors_map_from_index != self._context_class_to_sampling_rate
-            ):
-                logging.info(
-                    f"The sampling factors map was updated: {factors_map_from_index}"
-                )
-                self._context_class_to_sampling_rate = factors_map_from_index
+        if self._latest_seen_sampling_config == sampling_config:
+            return
 
-    @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
+        self._latest_seen_sampling_config = sampling_config
+        default_from_index = sampling_config.get("default_factor")
+        factors_map_from_index = sampling_config.get("factors_map")
+
+        if (
+            default_from_index is not None
+            and default_from_index != self._default_sampling_rate
+        ):
+            logging.info(
+                f"The default sampling factor was updated: {default_from_index}"
+            )
+            self._default_sampling_rate = default_from_index
+
+        if (
+            factors_map_from_index
+            and factors_map_from_index != self._context_class_to_sampling_rate
+        ):
+            logging.info(
+                f"The sampling factors map was updated: {factors_map_from_index}"
+            )
+            self._context_class_to_sampling_rate = factors_map_from_index
+
     @Decorators.refresh_token_if_needed
     def get_sampling_factors(self):
         """
@@ -704,10 +714,11 @@ class Client:
         [{
             "config_name": "Training",
             "factors_map": {
-                "TEST": 0.5,
+                "TEST_CONTEXT_CLASS": 0.5,
             },
             "default_factor": 0.1,
         }]
+        config_name is a required field, factors_map and default_factor are optional.
         When the client is initiated with a config name, only the matching config
         details will be returned (if exists).
         """
