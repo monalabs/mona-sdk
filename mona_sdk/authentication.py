@@ -21,6 +21,7 @@ authentication status information.
 import os
 import time
 import datetime
+from functools import wraps
 from threading import Lock
 
 import requests
@@ -28,8 +29,6 @@ from requests.models import Response
 
 from .logger import get_logger
 from .client_exceptions import MonaAuthenticationException
-
-from functools import wraps
 
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
