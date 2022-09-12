@@ -30,7 +30,6 @@ from requests.models import Response
 from .logger import get_logger
 from .client_exceptions import MonaAuthenticationException
 
-
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
 # time to refresh the token before it expires (i.e. - in case
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
