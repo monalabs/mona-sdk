@@ -667,8 +667,8 @@ class Client:
     def _update_sampling_factors_if_needed(self):
         """
         If the client was initiated with a sampling config name, check if the
-        configuration was changed since the default factor and sampling map was
-        assigned, and if so, update the client vars accordingly.
+        configuration was changed since the client vars were assigned, and if so, update
+        them accordingly.
         """
         if self._sampling_config_name:
             # Refetch the updated config from the index (if the response is not cached).
