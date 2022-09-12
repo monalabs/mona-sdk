@@ -276,7 +276,9 @@ class Client:
             except IndexError:
                 raise MonaInitializationException("Config name does not exist.")
 
-            self._context_class_to_sampling_rate = sampling_config.get("factors_map", {})
+            self._context_class_to_sampling_rate = sampling_config.get(
+                "factors_map", {}
+            )
             self._default_sampling_rate = sampling_config.get(
                 "default_factor", default_sampling_rate
             )
