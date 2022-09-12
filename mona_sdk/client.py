@@ -40,12 +40,12 @@ from .client_util import (
     get_boolean_value_for_env_var,
 )
 from .authentication import (
+    Decorators,
     is_authenticated,
     first_authentication,
     get_basic_auth_header,
     get_current_token_by_api_key,
 )
-from .decorators import Decorators
 
 SAMPLING_FACTORS_MAX_AGE_SECONDS = 300
 
@@ -281,6 +281,8 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
+        print(f"Initial sampling_config: {sampling_config}")
+
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"incoming{self._user_id}.monalabs.io"
@@ -394,34 +396,6 @@ class Client:
 
     def _should_sample_data(self):
         return (self.default_sampling_rate < 1) or self.context_class_to_sampling_rate
-
-    def _update_sampling_factors_if_needed(self):
-        if self.sampling_config_name:
-            # Refetch the updated config from the index (if the response is not cached).
-            sampling_config = self.get_sampling_factors()[0]
-            default_from_index = sampling_config.get("default_factor")
-            factors_map_from_index = sampling_config.get("factors_map")
-
-            # If the factors map or the default was changed, update the client
-            # accordingly.
-
-            if (
-                default_from_index is not None
-                and default_from_index != self.default_sampling_rate
-            ):
-                logging.info(
-                    f"The default sampling factor was updated: {default_from_index}"
-                )
-                self.default_sampling_rate = default_from_index
-
-            if (
-                factors_map_from_index
-                and factors_map_from_index != self.context_class_to_sampling_rate
-            ):
-                logging.info(
-                    f"The sampling factors map was updated: {factors_map_from_index}"
-                )
-                self.context_class_to_sampling_rate = factors_map_from_index
 
     def _export_batch_inner(
         self,
@@ -690,6 +664,39 @@ class Client:
             "get_config_history", data={"number_of_revisions": number_of_revisions}
         )
 
+    def _update_sampling_factors_if_needed(self):
+        """
+        If the client was initiated with a sampling config name, check if the
+        configuration was changed since the default factor and sampling map was
+        assigned, and if so, update the client vars accordingly.
+        """
+        if self.sampling_config_name:
+            # Refetch the updated config from the index (if the response is not cached).
+            sampling_config = self.get_sampling_factors()[0]
+
+            print(f"Current sampling_config: {sampling_config}")
+
+            default_from_index = sampling_config.get("default_factor")
+            factors_map_from_index = sampling_config.get("factors_map")
+
+            if (
+                default_from_index is not None
+                and default_from_index != self.default_sampling_rate
+            ):
+                logging.info(
+                    f"The default sampling factor was updated: {default_from_index}"
+                )
+                self.default_sampling_rate = default_from_index
+
+            if (
+                factors_map_from_index
+                and factors_map_from_index != self.context_class_to_sampling_rate
+            ):
+                logging.info(
+                    f"The sampling factors map was updated: {factors_map_from_index}"
+                )
+                self.context_class_to_sampling_rate = factors_map_from_index
+
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     @Decorators.refresh_token_if_needed
     def get_sampling_factors(self):
@@ -939,8 +946,7 @@ class Client:
         """
         try:
             app_server_response = requests.post(
-                f"http://local.monalabs.io:5000/{endpoint_name}",
-                # f"{self._app_server_url}/{endpoint_name}",
+                f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
