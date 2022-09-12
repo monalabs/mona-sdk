@@ -281,8 +281,6 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
-        print(f"Initial sampling_config: {sampling_config}")
-
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"incoming{self._user_id}.monalabs.io"
@@ -673,9 +671,6 @@ class Client:
         if self.sampling_config_name:
             # Refetch the updated config from the index (if the response is not cached).
             sampling_config = self.get_sampling_factors()[0]
-
-            print(f"Current sampling_config: {sampling_config}")
-
             default_from_index = sampling_config.get("default_factor")
             factors_map_from_index = sampling_config.get("factors_map")
 
