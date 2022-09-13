@@ -329,7 +329,7 @@ class Decorators(object):
             # messages nor config)
             should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
 
-            # message_to_log is the the messages/config that should be logged in case of
+            # message_to_log is the messages/config that should be logged in case of
             # an authentication failure.
             message_to_log = args[1] if should_log_args else None
 

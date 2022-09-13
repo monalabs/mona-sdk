@@ -18,6 +18,7 @@ import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
+from cachetools import TTLCache, cached
 
 import jwt
 import requests
@@ -105,6 +106,12 @@ DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR
 # See readme for more details.
 SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
+)
+
+SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
+
+SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
+    "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
 )
 
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
@@ -201,6 +208,7 @@ class Client:
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIGURATION_DICT,
+        sampling_config_name=SAMPLING_CONFIG_NAME,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -212,6 +220,12 @@ class Client:
             raise MonaInitializationException(
                 "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must be "
                 "provided."
+            )
+
+        if sampling_config_name and context_class_to_sampling_rate:
+            raise MonaInitializationException(
+                "Only one sampling method can be used at a time. Either remove "
+                "sampling_config_name or context_class_to_sampling_rate"
             )
 
         self._logger = get_logger()
@@ -250,8 +264,27 @@ class Client:
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
-        self._default_sampling_rate = default_sampling_rate
+
+        # Data sampling.
+
+        self._sampling_config_name = sampling_config_name
         self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
+        self._default_sampling_rate = default_sampling_rate
+
+        if self._sampling_config_name:
+            sampling_factors_list = self.get_sampling_factors()
+
+            if not sampling_factors_list:
+                raise MonaInitializationException("Config name does not exist.")
+
+            self._latest_seen_sampling_config = sampling_factors_list[0]
+
+            self._context_class_to_sampling_rate = (
+                self._latest_seen_sampling_config.get("factors_map", {})
+            )
+            self._default_sampling_rate = self._latest_seen_sampling_config.get(
+                "default_factor", default_sampling_rate
+            )
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
@@ -373,6 +406,8 @@ class Client:
         default_action=None,
         filter_none_fields=None,
     ):
+        self._update_sampling_factors_if_needed()
+
         events = mona_messages_to_dicts_validation(
             events, self.raise_export_exceptions, self.should_log_failed_messages
         )
@@ -632,7 +667,88 @@ class Client:
             "get_config_history", data={"number_of_revisions": number_of_revisions}
         )
 
+    @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
+    def _update_sampling_factors_if_needed(self):
+        """
+        If the client was initiated with a sampling config name, check if the
+        configuration was changed since the client vars were assigned, and if so, update
+        them accordingly.
+        """
+        if not self._sampling_config_name:
+            return
+
+        # Refetch the updated config from the index.
+        sampling_config = self.get_sampling_factors()[0]
+
+        if self._latest_seen_sampling_config == sampling_config:
+            return
+
+        self._latest_seen_sampling_config = sampling_config
+        default_from_index = sampling_config.get("default_factor")
+        factors_map_from_index = sampling_config.get("factors_map")
+
+        if (
+            default_from_index is not None
+            and default_from_index != self._default_sampling_rate
+        ):
+            logging.info(
+                f"The default sampling factor was updated: {default_from_index}"
+            )
+            self._default_sampling_rate = default_from_index
+
+        if (
+            factors_map_from_index
+            and factors_map_from_index != self._context_class_to_sampling_rate
+        ):
+            logging.info(
+                f"The sampling factors map was updated: {factors_map_from_index}"
+            )
+            self._context_class_to_sampling_rate = factors_map_from_index
+
     @Decorators.refresh_token_if_needed
+    def get_sampling_factors(self):
+        """
+        A wrapper function for "Get sampling factors" REST endpoint.
+        The response will include a list of sampling config names, with their sampling
+        map and default sampling factor, in the following format:
+        [{
+            "config_name": "Training",
+            "factors_map": {
+                "TEST_CONTEXT_CLASS": 0.5,
+            },
+            "default_factor": 0.1,
+        }]
+        config_name is a required field, factors_map and default_factor are optional.
+        When the client is initiated with a config name, only the matching config
+        details will be returned (if exists).
+        """
+        return self._app_server_request(
+            "get_sampling_factors",
+            data={"config_name": self._sampling_config_name},
+        )["response_data"]
+
+    @Decorators.refresh_token_if_needed
+    def create_sampling_factor(self, config_name, sampling_factor, context_class=None):
+        """
+        A wrapper function for "Create sampling factor" REST endpoint.
+        """
+        response = self._app_server_request(
+            "create_sampling_factor",
+            data={
+                "config_name": config_name,
+                "sampling_factor": sampling_factor,
+                "context_class": context_class,
+            },
+        )
+
+        error_message = response["error_message"]
+
+        return (
+            f"Failed to create sampling factor: {error_message}"
+            if error_message
+            else "Sampling factor created successfully."
+        )
+
     def validate_config(
         self,
         config,
