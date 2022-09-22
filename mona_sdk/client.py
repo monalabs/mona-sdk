@@ -393,7 +393,7 @@ class Client:
             context_class
         )
         context_id = message.get(CONTEXT_ID_FIELD_NAME)
-        if context_class_sampling_rate:
+        if context_class_sampling_rate is not None:
             return keep_message_after_sampling(context_id, context_class_sampling_rate)
         return keep_message_after_sampling(context_id, self._default_sampling_rate)
 
@@ -467,7 +467,7 @@ class Client:
         # Create the response and return it.
         client_response = Client._create_client_response(
             rest_api_response,
-            total=len(events),
+            total=len(messages_to_send),
         )
         if client_response["failed"] > 0:
             handle_export_error(
