@@ -8,59 +8,61 @@ https://stackoverflow.com/questions/51649227/wrap-all-class-methods-using-a-meta
 """
 
 
-def async_wrap(client_event_loop=None, client_executor=None):
-    def run_outer(func):
+def async_wrap(func, client_event_loop=None, client_executor=None):
+    event_loop = (
+        asyncio.get_event_loop() if not client_event_loop else client_event_loop
+    )
+
+    def run_outer():
         @wraps(func)
-        async def run_inner(
-            *args, event_loop=client_event_loop, executor=client_executor, **kwargs
-        ):
-            if event_loop is None:
-                event_loop = asyncio.get_event_loop()
+        async def run_inner(*args, **kwargs):
             pfunc = partial(func, *args, **kwargs)
-            return await event_loop.run_in_executor(executor, pfunc)
+            return await event_loop.run_in_executor(client_executor, pfunc)
 
         return run_inner
 
-    return run_outer
-
-
-# def async_wrap(func):
-#    @wraps(func)
-#    async def run(*args, loop=None, executor=None, **kwargs):
-#        print("hey func is wrapped")
-#        if loop is None:
-#            loop = asyncio.get_event_loop()
-#        pfunc = partial(func, *args, **kwargs)
-#        return await loop.run_in_executor(executor, pfunc)
-#
-#    return run
+    return run_outer()
 
 
 class AsyncMeta(type):
-    def __init__(self, class_name, bases, class_dict):
+    @classmethod
+    def __prepare__(metacls, name, bases, **kwargs):
+        # kargs = {"loop": 1, "executor": 2}
+        return super().__prepare__(name, bases, **kwargs)
+
+    def __new__(metacls, name, bases, namespace, **kwargs):
+        # kwargs = {"loop": 1, "executor": 2}
+        return super().__new__(metacls, name, bases, namespace)
+
+    def __init__(metacls, class_name, bases, class_dict, **kwargs):
+        event_loop = kwargs["client_loop"] if "client_loop" in kwargs else None
         print("meta.__init__()")
-        print(dir(self))
-        # event_loop = getattr(self, "event_loop") if "event_loop" in dir(self) else None
+        print(dir(metacls))
         # executor = getattr(self, "executor") if "executor" in dir(self) else None
 
-        for attr_name in dir(self):
+        for attr_name in dir(metacls):
             if attr_name.startswith("__"):  # == "__class__" or attr_name == "__init__":
                 # the metaclass is a callable attribute too,
                 # but we want to leave this one alone
                 continue
 
-            current_method = getattr(self, attr_name)
+            current_method = getattr(metacls, attr_name)
             if hasattr(current_method, "__call__"):
-                current_method_as_asynch = async_wrap(current_method)
-                setattr(self, f"{attr_name}_asynch", current_method_as_asynch)
-        print(dir(self))
+                current_method_as_asynch = async_wrap(
+                    current_method, client_event_loop=event_loop
+                )
+                setattr(metacls, f"{attr_name}_asynch", current_method_as_asynch)
+        print(dir(metacls))
         # not need for the `return` here
-        super(AsyncMeta, self).__init__(class_name, bases, class_dict)
+        super(AsyncMeta, metacls).__init__(class_name, bases, class_dict)
 
 
-class AsyncClient(Client, metaclass=AsyncMeta):
-    def __init__(self, *args, **kwargs):
-        print("child.__init__()")
-        super().__init__(*args, **kwargs)
+def get_async_client(*args, event_loop=None, executor=None, **kwargs):
+    class AsyncClient(
+        Client, metaclass=AsyncMeta, client_loop=event_loop, client_executor=executor
+    ):
+        def __init__(self, args, kwargs):
+            print("child.__init__()")
+            super().__init__(*args, **kwargs)
 
-
+    return AsyncClient(args, kwargs)
