@@ -9,15 +9,17 @@ https://stackoverflow.com/questions/51649227/wrap-all-class-methods-using-a-meta
 
 
 def async_wrap(func, client_event_loop=None, client_executor=None):
-    event_loop = (
+    default_event_loop = (
         asyncio.get_event_loop() if not client_event_loop else client_event_loop
     )
 
     def run_outer():
         @wraps(func)
         async def run_inner(*args, **kwargs):
+            final_event_loop = kwargs.pop("event_loop", None) or default_event_loop
+            final_executor = kwargs.pop("executor", None) or client_executor
             pfunc = partial(func, *args, **kwargs)
-            return await event_loop.run_in_executor(client_executor, pfunc)
+            return await final_event_loop.run_in_executor(final_executor, pfunc)
 
         return run_inner
 
