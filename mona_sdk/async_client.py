@@ -8,32 +8,32 @@ https://stackoverflow.com/questions/51649227/wrap-all-class-methods-using-a-meta
 """
 
 
-def async_wrap(func, client_event_loop=None, client_executor=None):
-    default_event_loop = (
-        asyncio.get_event_loop() if not client_event_loop else client_event_loop
-    )
-
-    def run_outer():
-        @wraps(func)
-        async def run_inner(*args, **kwargs):
-            final_event_loop = kwargs.pop("event_loop", None) or default_event_loop
-            final_executor = kwargs.pop("executor", None) or client_executor
-            pfunc = partial(func, *args, **kwargs)
-            return await final_event_loop.run_in_executor(final_executor, pfunc)
-
-        return run_inner
-
-    return run_outer()
+def async_wrap(func):
+    @wraps(func)
+    async def run_inner(*args, **kwargs):
+        async_client = args[0]
+        final_event_loop = (
+            kwargs.pop("event_loop", None)
+            or async_client._event_loop
+            or asyncio.get_event_loop()
+        )
+        final_executor = kwargs.pop("executor", None) or async_client._executor
+        partial_function = partial(func, *args, **kwargs)
+        return await final_event_loop.run_in_executor(
+            final_executor, partial_function
+        )
+    return run_inner
 
 
 class AsyncMeta(type):
-    def __new__(metacls, name, bases, namespace, **kwargs):
-        # kwargs = {"loop": 1, "executor": 2}
+    def __new__(
+        metacls, name, bases, namespace, client_loop=None, client_executor=None
+    ):
         return super().__new__(metacls, name, bases, namespace)
 
-    def __init__(metacls, class_name, bases, class_dict, **kwargs):
-        event_loop = kwargs["client_loop"] if "client_loop" in kwargs else None
-        executor = kwargs["client_executor"] if "client_executor" in kwargs else None
+    def __init__(
+        metacls, class_name, bases, class_dict, client_loop=None, client_executor=None
+    ):
         print("meta.__init__()")
         print(dir(metacls))
 
@@ -44,9 +44,7 @@ class AsyncMeta(type):
             current_method = getattr(metacls, attr_name)
             if hasattr(current_method, "__call__"):
                 current_method_as_asynch = async_wrap(
-                    current_method,
-                    client_event_loop=event_loop,
-                    client_executor=executor,
+                    current_method
                 )
                 setattr(metacls, f"{attr_name}_asynch", current_method_as_asynch)
         print(dir(metacls))
@@ -61,5 +59,7 @@ def get_async_client(*args, event_loop=None, executor=None, **kwargs):
         def __init__(self, args, kwargs):
             print("child.__init__()")
             super().__init__(*args, **kwargs)
+            self._event_loop = event_loop
+            self._executor = executor
 
     return AsyncClient(args, kwargs)
