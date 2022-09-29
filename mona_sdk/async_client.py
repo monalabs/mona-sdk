@@ -25,31 +25,26 @@ def async_wrap(func, client_event_loop=None, client_executor=None):
 
 
 class AsyncMeta(type):
-    @classmethod
-    def __prepare__(metacls, name, bases, **kwargs):
-        # kargs = {"loop": 1, "executor": 2}
-        return super().__prepare__(name, bases, **kwargs)
-
     def __new__(metacls, name, bases, namespace, **kwargs):
         # kwargs = {"loop": 1, "executor": 2}
         return super().__new__(metacls, name, bases, namespace)
 
     def __init__(metacls, class_name, bases, class_dict, **kwargs):
         event_loop = kwargs["client_loop"] if "client_loop" in kwargs else None
+        executor = kwargs["client_executor"] if "client_executor" in kwargs else None
         print("meta.__init__()")
         print(dir(metacls))
-        # executor = getattr(self, "executor") if "executor" in dir(self) else None
 
         for attr_name in dir(metacls):
-            if attr_name.startswith("__"):  # == "__class__" or attr_name == "__init__":
-                # the metaclass is a callable attribute too,
-                # but we want to leave this one alone
+            if attr_name.startswith("__") or attr_name.startswith("_"):
                 continue
 
             current_method = getattr(metacls, attr_name)
             if hasattr(current_method, "__call__"):
                 current_method_as_asynch = async_wrap(
-                    current_method, client_event_loop=event_loop
+                    current_method,
+                    client_event_loop=event_loop,
+                    client_executor=executor,
                 )
                 setattr(metacls, f"{attr_name}_asynch", current_method_as_asynch)
         print(dir(metacls))
