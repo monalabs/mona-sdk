@@ -34,9 +34,6 @@ class AsyncMeta(type):
     def __init__(
         metacls, class_name, bases, class_dict, client_loop=None, client_executor=None
     ):
-        print("meta.__init__()")
-        print(dir(metacls))
-
         for attr_name in dir(metacls):
             if attr_name.startswith("__") or attr_name.startswith("_"):
                 continue
@@ -47,7 +44,6 @@ class AsyncMeta(type):
                     current_method
                 )
                 setattr(metacls, f"{attr_name}_asynch", current_method_as_asynch)
-        print(dir(metacls))
         # not need for the `return` here
         super(AsyncMeta, metacls).__init__(class_name, bases, class_dict)
 
@@ -57,7 +53,6 @@ def get_async_client(*args, event_loop=None, executor=None, **kwargs):
         Client, metaclass=AsyncMeta, client_loop=event_loop, client_executor=executor
     ):
         def __init__(self, args, kwargs):
-            print("child.__init__()")
             super().__init__(*args, **kwargs)
             self._event_loop = event_loop
             self._executor = executor
