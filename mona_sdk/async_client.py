@@ -2,11 +2,6 @@ import asyncio
 from functools import wraps, partial
 from mona_sdk import Client
 
-"""
-Implementation based on: 
-https://stackoverflow.com/questions/51649227/wrap-all-class-methods-using-a-meta-class
-"""
-
 
 def async_wrap(func):
     @wraps(func)
