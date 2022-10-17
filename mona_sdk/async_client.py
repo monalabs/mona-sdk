@@ -4,6 +4,11 @@ from mona_sdk import Client
 
 
 def async_wrap(func):
+    """
+    Wraps the synchronous methods to asynchronous methods.
+    This implementation is based on the second answer here:
+    https://stackoverflow.com/questions/43241221/how-can-i-wrap-a-synchronous-function-in-an-async-coroutine
+    """
     @wraps(func)
     async def run_inner(*args, **kwargs):
         async_client = args[0]
@@ -41,7 +46,18 @@ class AsyncMeta(type):
 class AsyncClient(
     Client, metaclass=AsyncMeta
 ):
+    """
+    This client wraps each of the methods in the regular synchronous client using
+    run_in_executor. This way, the method becomes non-blocking. The asynchronous methods
+    are stored as new methods with 'async' suffix (for example, the async version of
+    export_batch is async version is export_batch_async).
+    """
     def __init__(self, *args, event_loop=None, executor=None, **kwargs):
+        """
+        Creates the AsyncClient object.
+        :param event_loop: optional.
+        :param executor: optional.
+        """
         super().__init__(*args, **kwargs)
         self._event_loop = event_loop
         self._executor = executor
