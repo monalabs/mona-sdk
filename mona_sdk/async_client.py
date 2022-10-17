@@ -5,7 +5,8 @@ from mona_sdk import Client
 
 def async_wrap(func):
     """
-    Wraps the synchronous methods to asynchronous methods.
+    Wraps the synchronous methods to asynchronous methods using run_in_executor that
+    open a new thread to run the method in.
     This implementation is based on the second answer here:
     https://stackoverflow.com/questions/43241221/how-can-i-wrap-a-synchronous-function-in-an-async-coroutine
     """
