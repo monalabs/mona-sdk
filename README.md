@@ -254,7 +254,7 @@ Everything described for the regular client applies also to the AsyncClient, wit
   - event_loop (_UnixSelctorEventLoop): (optional) The same as above, but in the method level.
   - executor (TreadPoolExecutor): (optional) The same as above, but in the method level.
 
-- As you might noticed, you can provide the event loop and executor in the AsyncClient initial
+- As you might noticed, you can provide the event loop and executor in the AsyncClient initiation
 level and the method call level. In a method call, if provided, the ones from the method level will be used.
 If not provided, the ones given in the AsyncClient initiation will be taken. Otherwise, defaults will be used. 
 
