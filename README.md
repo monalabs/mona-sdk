@@ -236,3 +236,52 @@ In order to run the tests type the following to your shell:
 ```
 python -m unittest mona_sdk/tests/client_tests.py
 ```
+
+## Asynchronous Client
+
+Same services as the regular client are provided in a non-blocking version in the AsyncClient, in order to give you the option to embed the code you write using this package with asyncIO code.
+
+Everything described for the regular client applies also to the AsyncClient, with these additions:
+
+- **Methods names**
+  - Each method of the AsyncClient in its async form gets an "_async" suffix (for example, export turns to export_async, export_batch turns to export_batch_async, etc.) 
+- **Client parameters:** 
+  - event_loop (_UnixSelctorEventLoop): (optional) The event loop that will manage the threads. 
+  - executor (TreadPoolExecutor): (optional) The executor the will manage the thread pool. 
+  
+  
+- **Methods keyword parameters:**
+  - event_loop (_UnixSelctorEventLoop): (optional) The same as above, but in the method level.
+  - executor (TreadPoolExecutor): (optional) The same as above, but in the method level.
+
+- As you might noticed, you can provide the event loop and executor in the AsyncClient initial
+level and the method call level. In a method call, if provided, the ones from the method level will be used.
+If not provided, the ones given in the AsyncClient initiation will be taken. Otherwise, defaults will be used. 
+
+
+**An example for using export_batch_async to send data to Mona**:
+```
+from mona_sdk.client import AsyncClient, MonaSingleMessage
+import asyncio
+
+def main():
+    api_key = <An API key is accessible in the admin page in your dashboard>
+    secret = <secret corresponding to the given api_key>
+
+    my_mona_async_client = AsyncClient(api_key, secret)
+
+    messages_batch_to_mona = []
+    for context_instance in my_data:
+        messages_batch_to_mona.append(
+            MonaSingleMessage(
+                message=context_instance.relevant_monitoring_information,
+                contextClass="MY_CONTEXT_CLASS_NAME",
+                contextId=context_instance.unique_id,
+                exportTimestamp=context_instance.timestamp,
+            )
+        )
+
+    asyncio.create_task(my_mona_async_client.export_batch_async(messages_batch_to_mona))
+
+asyncio.run(main())
+```
