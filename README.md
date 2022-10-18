@@ -241,22 +241,14 @@ python -m unittest mona_sdk/tests/client_tests.py
 
 Same services as the regular client are provided in a non-blocking version in the AsyncClient, in order to give you the option to embed the code you write using this package with asyncIO code.
 
-Everything described for the regular client applies also to the AsyncClient, with these additions:
-
-- **Methods names:**
-  - Each method of the AsyncClient in its async form gets an "_async" suffix (for example, export turns to export_async, export_batch turns to export_batch_async, etc.) 
-- **Client parameters:** 
-  - event_loop (_UnixSelctorEventLoop): (optional) The event loop that will manage the threads. 
-  - executor (TreadPoolExecutor): (optional) The executor the will manage the thread pool. 
+**AsyncClient Constructor parameters:** 
+  - event_loop (_UnixSelctorEventLoop): (optional) The event loop that will manage the threads. If not provided, a default is used.
+  - executor (TreadPoolExecutor): (optional) The executor the will manage the thread pool. If not provided, a default is used.
   
   
-- **Methods keyword parameters:**
-  - event_loop (_UnixSelctorEventLoop): (optional) The same as above, but in the method level.
-  - executor (TreadPoolExecutor): (optional) The same as above, but in the method level.
-
-- As you might noticed, you can provide the event loop and executor in the AsyncClient initiation
-level and the method call level. In a method call, if provided, the ones from the method level will be used.
-If not provided, the ones given in the AsyncClient initiation will be taken. Otherwise, defaults will be used. 
+When using AsyncClient, while all the regular (synchronous) client functions are still supported, you can simply add "_async" suffix to any function (e.g export_async() instead of export(); export_batch_async() instead of export_batch() etc). The async version of the methods accept the same parameter as the synchronous version, in addition to the following parameters:
+  - event_loop (_UnixSelctorEventLoop): (optional) The same as above, but in the method level. This overrides the event loop provided for the AsyncClient constructor. 
+  - executor (TreadPoolExecutor): (optional) The same as above, but in the method level. This overrides the executor provided for the AsyncClient constructor. 
 
 
 **An example for using export_batch_async to send data to Mona asynchronously**:
