@@ -259,7 +259,7 @@ level and the method call level. In a method call, if provided, the ones from th
 If not provided, the ones given in the AsyncClient initiation will be taken. Otherwise, defaults will be used. 
 
 
-**An example for using export_batch_async to send data to Mona**:
+**An example for using export_batch_async to send data to Mona asynchronously**:
 ```
 from mona_sdk.client import AsyncClient, MonaSingleMessage
 import asyncio
