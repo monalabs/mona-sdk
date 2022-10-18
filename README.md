@@ -243,7 +243,7 @@ Same services as the regular client are provided in a non-blocking version in th
 
 Everything described for the regular client applies also to the AsyncClient, with these additions:
 
-- **Methods names**
+- **Methods names:**
   - Each method of the AsyncClient in its async form gets an "_async" suffix (for example, export turns to export_async, export_batch turns to export_batch_async, etc.) 
 - **Client parameters:** 
   - event_loop (_UnixSelctorEventLoop): (optional) The event loop that will manage the threads. 
