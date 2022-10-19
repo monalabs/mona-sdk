@@ -174,7 +174,7 @@ class MonaSingleMessage:
     contextId: str = None
     exportTimestamp: int or str = None
     action: str = None
-    sample_config_name: str = None
+    sampleConfigName: str = None
 
     def get_dict(self):
         return {
