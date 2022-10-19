@@ -484,16 +484,21 @@ class Client:
 
         return client_response
 
-    def _send_mona_rest_api_request(self, messages, default_action=None, sample_config_name=None):
+    def _send_mona_rest_api_request(
+        self, messages, default_action=None, sample_config_name=None
+    ):
         """
         Sends a REST call to Mona's servers with the provided messages.
         :return: A REST response.
         """
-        body = {"userId": self._user_id, "messages": messages}
+        body = {
+            "userId": self._user_id,
+            "messages": messages,
+            "sampleConfigName": sample_config_name,
+        }
         if default_action:
             body["defaultAction"] = default_action
-        if sample_config_name:
-            body["sampleConfigName"] = sample_config_name
+
         return requests.request(
             "POST",
             self._rest_api_url,
