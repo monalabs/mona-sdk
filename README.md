@@ -246,9 +246,9 @@ Same services as the regular client are provided in a non-blocking version in th
   - executor (TreadPoolExecutor): (optional) The executor the will manage the thread pool. If not provided, a default is used.
   
   
-When using AsyncClient, while all the regular (synchronous) client functions are still supported, you can simply add "_async" suffix to any function (e.g export_async() instead of export(); export_batch_async() instead of export_batch() etc). The async version of the methods accept the same parameter as the synchronous version, in addition to the following parameters:
-  - event_loop (_UnixSelctorEventLoop): (optional) The same as above, but in the method level. This overrides the event loop provided for the AsyncClient constructor. 
-  - executor (TreadPoolExecutor): (optional) The same as above, but in the method level. This overrides the executor provided for the AsyncClient constructor. 
+When using AsyncClient, while all the regular (synchronous) client functions are still supported, you can simply add "_async" suffix to any function (e.g export_async() instead of export(); export_batch_async() instead of export_batch() etc). The async version of the methods accept the same parameters as the synchronous version, in addition to the following parameters:
+  - event_loop (_UnixSelctorEventLoop): (optional) This overrides the event loop provided for the AsyncClient constructor. 
+  - executor (TreadPoolExecutor): (optional) This overrides the executor provided for the AsyncClient constructor. 
 
 
 **An example for using export_batch_async to send data to Mona asynchronously**:
