@@ -493,11 +493,13 @@ class Client:
         """
         body = {
             "userId": self._user_id,
-            "messages": messages,
-            "sampleConfigName": sample_config_name,
+            "messages": messages
         }
         if default_action:
             body["defaultAction"] = default_action
+
+        if sample_config_name:
+            body["sampleConfigName"] = sample_config_name
 
         return requests.request(
             "POST",
