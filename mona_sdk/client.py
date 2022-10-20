@@ -505,7 +505,7 @@ class Client:
             "POST",
             self._rest_api_url,
             headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
-            json=body,
+            json=body
         )
 
     @staticmethod
