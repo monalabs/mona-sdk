@@ -174,6 +174,7 @@ class MonaSingleMessage:
     contextId: str = None
     exportTimestamp: int or str = None
     action: str = None
+    sampleConfigName: str = None
 
     def get_dict(self):
         return {
@@ -455,7 +456,7 @@ class Client:
         # Create and send the rest call to Mona's rest-api.
         try:
             rest_api_response = self._send_mona_rest_api_request(
-                messages_to_send, default_action
+                messages_to_send, default_action, self._sampling_config_name
             )
         except ConnectionError:
             return handle_export_error(
@@ -483,19 +484,28 @@ class Client:
 
         return client_response
 
-    def _send_mona_rest_api_request(self, messages, default_action=None):
+    def _send_mona_rest_api_request(
+        self, messages, default_action=None, sample_config_name=None
+    ):
         """
         Sends a REST call to Mona's servers with the provided messages.
         :return: A REST response.
         """
-        body = {"userId": self._user_id, "messages": messages}
+        body = {
+            "userId": self._user_id,
+            "messages": messages
+        }
         if default_action:
             body["defaultAction"] = default_action
+
+        if sample_config_name:
+            body["sampleConfigName"] = sample_config_name
+
         return requests.request(
             "POST",
             self._rest_api_url,
             headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
-            json=body,
+            json=body
         )
 
     @staticmethod
