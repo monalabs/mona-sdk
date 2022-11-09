@@ -65,6 +65,9 @@ class AsyncClient(Client, metaclass=AsyncMeta):
         self._event_loop = event_loop
         self._executor = executor
 
+    # We add the signature of export_async and export_batch_async because the IDE raises
+    # warning for methods that doesn't appear literally in the class. Other methods will
+    # raise this warning but can be used asynchronously.
     def export_async(
         self,
         message: MonaSingleMessage,
