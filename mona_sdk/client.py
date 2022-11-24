@@ -495,7 +495,7 @@ class Client:
         :return: A REST response.
         """
         body = {
-            "userd": self._user_id,
+            "userId": self._user_id,
             "messages": messages
         }
         if default_action:
