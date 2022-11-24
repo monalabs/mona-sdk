@@ -481,9 +481,14 @@ class Client:
                 events if self.should_log_failed_messages else None,
             )
         else:
-            self._logger.info(
-                f"All {client_response['total']} messages have been sent."
-            )
+            if client_response['total'] > 0:
+                self._logger.info(
+                    f"All {client_response['total']} messages have been sent."
+                )
+            else:
+                self._logger.info(
+                    f"No messages were sampled in this batch."
+                )
 
         return client_response
 
