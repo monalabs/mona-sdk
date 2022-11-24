@@ -455,9 +455,10 @@ class Client:
 
         # Create and send the rest call to Mona's rest-api.
         try:
-            rest_api_response = self._send_mona_rest_api_request(
-                messages_to_send, default_action, self._sampling_config_name
-            )
+            if messages_to_send:
+                rest_api_response = self._send_mona_rest_api_request(
+                    messages_to_send, default_action, self._sampling_config_name
+                )
         except ConnectionError:
             return handle_export_error(
                 "Cannot connect to rest-api",
@@ -492,7 +493,7 @@ class Client:
         :return: A REST response.
         """
         body = {
-            "userId": self._user_id,
+            "userd": self._user_id,
             "messages": messages
         }
         if default_action:
