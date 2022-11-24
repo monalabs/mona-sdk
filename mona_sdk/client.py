@@ -508,6 +508,7 @@ class Client:
 
         if sample_config_name:
             body["sampleConfigName"] = sample_config_name
+
         return requests.request(
             "POST",
             self._rest_api_url,
