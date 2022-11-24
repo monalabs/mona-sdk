@@ -455,9 +455,12 @@ class Client:
 
         # Create and send the rest call to Mona's rest-api.
         try:
-            rest_api_response = self._send_mona_rest_api_request(
-                messages_to_send, default_action, self._sampling_config_name
-            )
+            if messages_to_send:
+                rest_api_response = self._send_mona_rest_api_request(
+                    messages_to_send, default_action, self._sampling_config_name
+                )
+            else:
+                rest_api_response = None
         except ConnectionError:
             return handle_export_error(
                 "Cannot connect to rest-api",
@@ -478,9 +481,14 @@ class Client:
                 events if self.should_log_failed_messages else None,
             )
         else:
-            self._logger.info(
-                f"All {client_response['total']} messages have been sent."
-            )
+            if client_response['total'] > 0:
+                self._logger.info(
+                    f"All {client_response['total']} messages have been sent."
+                )
+            else:
+                self._logger.info(
+                    f"No messages were sampled in this batch."
+                )
 
         return client_response
 
@@ -524,7 +532,7 @@ class Client:
         failure_reasons = {}
 
         # Check if some messages didn't passed validation on the rest-api.
-        if not response.ok:
+        if total > 0 and not response.ok:
             try:
                 result_info = response.json()
                 failed = result_info["failed"]
