@@ -508,7 +508,6 @@ class Client:
 
         if sample_config_name:
             body["sampleConfigName"] = sample_config_name
-
         return requests.request(
             "POST",
             self._rest_api_url,
@@ -530,10 +529,9 @@ class Client:
         # Sum the number of messaged that Mona's client didn't send to rest-api.
         failed = 0
         failure_reasons = {}
-        was_data_sampled_from_batch = True
 
         # Check if some messages didn't passed validation on the rest-api.
-        if response and not response.ok:
+        if total > 0 and not response.ok:
             try:
                 result_info = response.json()
                 failed = result_info["failed"]
@@ -542,17 +540,12 @@ class Client:
                 failed = total
                 failure_reasons = "Failed to send the batch to Mona's servers"
 
-        elif not response:
-            failed = 0
-            was_data_sampled_from_batch = False
-
         # Return the total result of the batch.
         return {
             "total": total,
             "failed": failed,
             "sent": total - failed,
             "failure_reasons": failure_reasons,
-            "was_data_sampled_from_batch": was_data_sampled_from_batch
         }
 
     @Decorators.refresh_token_if_needed
