@@ -503,7 +503,7 @@ class Client:
         body = {
             "userId": self._user_id,
             "messages": messages,
-            "mona_sdk_version": MONA_SDK_CURRENT_VERSION,
+            "monaVersion": MONA_SDK_CURRENT_VERSION,
         }
         if default_action:
             body["defaultAction"] = default_action
