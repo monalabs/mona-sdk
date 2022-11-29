@@ -18,15 +18,13 @@ import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
-from cachetools import TTLCache, cached
 
 import jwt
 import requests
+from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
 
-#from version import MONA_SDK_CURRENT_VERSION
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
-from setup import MONA_SDK_CURRENT_VERSION
 from .logger import get_logger
 from .validation import (
     handle_export_error,
