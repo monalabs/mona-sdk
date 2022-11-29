@@ -1,11 +1,12 @@
 import setuptools
 
+MONA_SDK_CURRENT_VERSION = "0.0.37"
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.36",
+    version="0.0.37",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",

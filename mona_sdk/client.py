@@ -18,10 +18,10 @@ import logging
 from json import JSONDecodeError
 from typing import List
 from dataclasses import dataclass
-from cachetools import TTLCache, cached
 
 import jwt
 import requests
+from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
 
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
@@ -450,8 +450,10 @@ class Client:
                 message_copy["message"] = self.filter_none_fields(
                     message_copy["message"]
                 )
-
-            messages_to_send.append(message_copy)
+            # If the message was left empty after it was filtered, we don't want it to
+            # be added.
+            if message_copy["message"]:
+                messages_to_send.append(message_copy)
 
         # Create and send the rest call to Mona's rest-api.
         try:
@@ -481,14 +483,12 @@ class Client:
                 events if self.should_log_failed_messages else None,
             )
         else:
-            if client_response['total'] > 0:
+            if client_response["total"] > 0:
                 self._logger.info(
                     f"All {client_response['total']} messages have been sent."
                 )
             else:
-                self._logger.info(
-                    f"No messages were sampled in this batch."
-                )
+                self._logger.info(f"No messages were sampled in this batch.")
 
         return client_response
 
@@ -501,7 +501,8 @@ class Client:
         """
         body = {
             "userId": self._user_id,
-            "messages": messages
+            "messages": messages,
+            "monaVersion": "0.0.37",  # TODO(smadar): remove.
         }
         if default_action:
             body["defaultAction"] = default_action
@@ -513,7 +514,7 @@ class Client:
             "POST",
             self._rest_api_url,
             headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
-            json=body
+            json=body,
         )
 
     @staticmethod
