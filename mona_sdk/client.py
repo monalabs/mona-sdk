@@ -502,7 +502,6 @@ class Client:
         body = {
             "userId": self._user_id,
             "messages": messages,
-            "monaVersion": "0.0.37",  # TODO(smadar): remove.
         }
         if default_action:
             body["defaultAction"] = default_action
