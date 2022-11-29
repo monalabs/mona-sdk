@@ -24,8 +24,9 @@ import jwt
 import requests
 from requests.exceptions import ConnectionError
 
-from version import MONA_SDK_CURRENT_VERSION
+#from version import MONA_SDK_CURRENT_VERSION
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+from setup import MONA_SDK_CURRENT_VERSION
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -503,7 +504,7 @@ class Client:
         body = {
             "userId": self._user_id,
             "messages": messages,
-            "monaVersion": MONA_SDK_CURRENT_VERSION,
+            "monaVersion": "0.0.37",  # TODO(smadar): remove.
         }
         if default_action:
             body["defaultAction"] = default_action
