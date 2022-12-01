@@ -1,6 +1,5 @@
 import setuptools
 
-MONA_SDK_CURRENT_VERSION = "0.0.37"
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -19,6 +18,7 @@ setuptools.setup(
         "python-jose>=3.2.0",
         "requests-mock>=1.8.0",
         "dataclasses==0.8; python_version<'3.7'",
+        "cachetools==5.2.0"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
