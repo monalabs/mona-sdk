@@ -298,7 +298,6 @@ class Client:
         host_name = override_host or f"api{self._user_id}.monalabs.io"
         return f"{http_protocol}://{host_name}"
 
-
     def is_active(self):
         """
         Returns True if the client is authenticated (or able to re-authenticate when
@@ -640,8 +639,7 @@ class Client:
                 "config": config,
             },
         )
-
-        if app_server_response and "response_data" not in app_server_response:
+        if "response_data" not in app_server_response:
             self._handle_service_error(
                 SERVICE_ERROR_MESSAGE + f" Service response: {app_server_response}"
             )
@@ -984,17 +982,7 @@ class Client:
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
-                return (
-                    self._handle_service_error(json_response["response_data"])
-                    if (
-                        json_response
-                        and type(json_response) is dict
-                        and json_response["response_data"].startswith(
-                            "Validation didn't pass"
-                        )
-                    )
-                    else self._handle_service_error(SERVICE_ERROR_MESSAGE)
-                )
+                return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
             return json_response
 
