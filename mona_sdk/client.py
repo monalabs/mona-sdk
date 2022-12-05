@@ -298,7 +298,6 @@ class Client:
         host_name = override_host or f"api{self._user_id}.monalabs.io"
         return f"{http_protocol}://{host_name}"
 
-
     def is_active(self):
         """
         Returns True if the client is authenticated (or able to re-authenticate when
@@ -990,7 +989,7 @@ class Client:
                         json_response
                         and type(json_response) is dict
                         and json_response["response_data"].startswith(
-                            "Validation didn't pass"
+                            "Given config is not valid"
                         )
                     )
                     else self._handle_service_error(SERVICE_ERROR_MESSAGE)
