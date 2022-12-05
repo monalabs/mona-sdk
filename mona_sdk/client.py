@@ -640,11 +640,6 @@ class Client:
             },
         )
 
-        if app_server_response and "response_data" not in app_server_response:
-            self._handle_service_error(
-                SERVICE_ERROR_MESSAGE + f" Service response: {app_server_response}"
-            )
-
         return app_server_response
 
     @Decorators.refresh_token_if_needed
