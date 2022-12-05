@@ -135,8 +135,6 @@ UNPROVIDED_VALUE = "mona_unprovided_value"
 CONTEXT_CLASS_FIELD_NAME = "arcClass"
 CONTEXT_ID_FIELD_NAME = "contextId"
 
-CONFIG_IS_NOT_VALID_MESSAGE_PREFIX = "Given config is not valid"
-
 
 @dataclass
 class MonaSingleMessage:
@@ -988,11 +986,9 @@ class Client:
                 return (
                     self._handle_service_error(json_response["response_data"])
                     if (
-                        json_response
-                        and type(json_response) is dict
-                        and json_response["response_data"].startswith(
-                            CONFIG_IS_NOT_VALID_MESSAGE_PREFIX
-                        )
+                        app_server_response.status_code == 400
+                        and json_response
+                        and "response_data" in json_response
                     )
                     else self._handle_service_error(SERVICE_ERROR_MESSAGE)
                 )
