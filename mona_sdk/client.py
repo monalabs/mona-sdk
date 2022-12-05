@@ -639,10 +639,6 @@ class Client:
                 "config": config,
             },
         )
-        if "response_data" not in app_server_response:
-            self._handle_service_error(
-                SERVICE_ERROR_MESSAGE + f" Service response: {app_server_response}"
-            )
 
         return app_server_response
 
@@ -982,7 +978,15 @@ class Client:
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
-                return self._handle_service_error(SERVICE_ERROR_MESSAGE)
+                return (
+                    self._handle_service_error(json_response["response_data"])
+                    if (
+                        app_server_response.status_code == 400
+                        and json_response
+                        and "response_data" in json_response
+                    )
+                    else self._handle_service_error(SERVICE_ERROR_MESSAGE)
+                )
 
             return json_response
 
