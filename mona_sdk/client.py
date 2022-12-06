@@ -599,7 +599,10 @@ class Client:
         upload_response = self._app_server_request("upload_config", config_to_upload)
 
         return (
-            {"new_config_id": upload_response["response_data"]["new_config_id"], "success": True}
+            {
+                "new_config_id": upload_response["response_data"]["new_config_id"],
+                "success": True,
+            }
             if upload_response
             else failure_upload_output
         )
@@ -631,6 +634,8 @@ class Client:
         :return: A json-serializable dict with the current defined configuration.
         """
         app_server_response = self._app_server_request("configs")
+        if not app_server_response:
+            return False
         try:
             return {
                 self._user_id: app_server_response["response_data"][
@@ -648,6 +653,8 @@ class Client:
         https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api
         """
         app_server_response = self._app_server_request("get_new_config_fields")
+        if not app_server_response:
+            return False
         try:
             return app_server_response["response_data"]["suggested_config"]
         except KeyError:
@@ -719,10 +726,19 @@ class Client:
         When the client is initiated with a config name, only the matching config
         details will be returned (if exists).
         """
-        return self._app_server_request(
+        response = self._app_server_request(
             "get_sampling_factors",
             data={"config_name": self._sampling_config_name},
-        )["response_data"]
+        )
+
+        return (
+            self._app_server_request(
+                "get_sampling_factors",
+                data={"config_name": self._sampling_config_name},
+            )["response_data"]
+            if response
+            else False
+        )
 
     @Decorators.refresh_token_if_needed
     def create_sampling_factor(self, config_name, sampling_factor, context_class=None):
@@ -737,6 +753,8 @@ class Client:
                 "context_class": context_class,
             },
         )
+        if not response:
+            return False
 
         error_message = response["error_message"]
 
@@ -826,14 +844,11 @@ class Client:
         endpoint. view full documentation here:
         https://docs.monalabs.io/docs/retrieve-suggested-config-from-user-input-via-rest-api
         """
-        app_server_response = self._app_server_request(
+        return self._app_server_request(
             "suggest_new_config",
             data={"events": events},
         )
-        if "response_data" not in app_server_response:
-            self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
-        return app_server_response
 
     @Decorators.refresh_token_if_needed
     def get_aggregated_data_of_a_specific_segment(
@@ -912,13 +927,15 @@ class Client:
                 "compared_segments_filter": compared_segments_filter,
             },
         )
+        if not app_server_response:
+            return False
 
-        if "response_data" not in app_server_response:
-            self._handle_service_error(
+        elif "response_data" not in app_server_response:
+            return self._handle_service_error(
                 f"{SERVICE_ERROR_MESSAGE} Server response: {app_server_response}"
             )
-
-        return app_server_response
+        else:
+            return app_server_response
 
     def _handle_service_error(self, error_message):
         """
