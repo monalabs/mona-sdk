@@ -573,17 +573,17 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
-        upload_output = {"success": False, "new_config_id": ""}
+        failure_upload_output = {"success": False, "new_config_id": ""}
 
         if not author and not self.should_use_authentication:
             self._handle_service_error(
                 "When using non authenticated client, author must be provided."
             )
-            return upload_output
+            return failure_upload_output
 
         if not isinstance(config, dict):
             self._handle_service_error("config must be a dict.")
-            return upload_output
+            return failure_upload_output
 
         keys_list = list(config.keys())
         if len(keys_list) == 1 and keys_list[0] == self._user_id:
@@ -596,30 +596,16 @@ class Client:
             "user_id": self._user_id,
         }
 
-        try:
-            upload_response = requests.post(
-                f"{self._app_server_url}/upload_config",
-                headers=get_basic_auth_header(
-                    self.api_key, self.should_use_authentication
-                ),
-                json=config_to_upload,
-            )
-            response_data = upload_response.json()["response_data"]
-            upload_output["new_config_id"] = response_data["new_config_id"]
-            upload_output["success"] = upload_response.ok
+        upload_response = self._app_server_request("upload_config", config_to_upload)
 
-            if not upload_output["success"]:
-                # Raise an exception if asked to.
-                self._handle_service_error(UPLOAD_CONFIG_ERROR_MESSAGE)
-
-        except ConnectionError:
-            # Raise an exception if asked to.
-            self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
-        except JSONDecodeError:
-            # Raise an exception if asked to.
-            self._handle_service_error(UPLOAD_CONFIG_ERROR_MESSAGE)
-
-        return upload_output
+        return (
+            {
+                "new_config_id": upload_response["response_data"]["new_config_id"],
+                "success": True,
+            }
+            if upload_response
+            else failure_upload_output
+        )
 
     @Decorators.refresh_token_if_needed
     def upload_config_per_context_class(
