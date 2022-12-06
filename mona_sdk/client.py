@@ -844,10 +844,17 @@ class Client:
         endpoint. view full documentation here:
         https://docs.monalabs.io/docs/retrieve-suggested-config-from-user-input-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "suggest_new_config",
             data={"events": events},
         )
+        if not app_server_response:
+            return False
+
+        if "response_data" not in app_server_response:
+            self._handle_service_error(SERVICE_ERROR_MESSAGE)
+
+        return app_server_response
 
 
     @Decorators.refresh_token_if_needed
