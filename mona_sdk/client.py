@@ -597,10 +597,12 @@ class Client:
         }
 
         upload_response = self._app_server_request("upload_config", config_to_upload)
-
+        upload_response = upload_response if upload_response else {}
         return (
             {
-                "new_config_id": upload_response["response_data"]["new_config_id"],
+                "new_config_id": upload_response.get("response_data", {}).get(
+                    "new_config_id"
+                ),
                 "success": True,
             }
             if upload_response
