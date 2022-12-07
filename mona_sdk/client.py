@@ -597,6 +597,10 @@ class Client:
         }
 
         upload_response = self._app_server_request("upload_config", config_to_upload)
+
+        # TODO(smadar): This line is here to workaround the fact  that there are 2
+        #  different returned types in a case of a failure and success. To be removed
+        #  when it's fixed.
         upload_response = upload_response if upload_response else {}
         return (
             {
@@ -605,9 +609,7 @@ class Client:
                 ),
                 "success": True,
             }
-            if upload_response
-            else failure_upload_output
-        )
+        ) if upload_response else failure_upload_output
 
     @Decorators.refresh_token_if_needed
     def upload_config_per_context_class(
