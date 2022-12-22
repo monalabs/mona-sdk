@@ -75,3 +75,10 @@ def keep_message_after_sampling(context_id, sampling_rate):
     else:
         # TODO(Nemo): Allow getting seed from the user for random.random().
         return random.random() <= sampling_rate
+def get_dict_result(success, data, error_message):
+    return {
+        "success": success,
+        "data": data,
+        "error_message": error_message
+    }
+
