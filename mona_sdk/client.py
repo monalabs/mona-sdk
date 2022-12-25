@@ -23,8 +23,8 @@ import jwt
 import requests
 from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
-
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -123,11 +123,11 @@ RETRIEVE_CONFIG_HISTORY = "Retrieve history is empty"
 GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR = (
     "Could not get aggregates state of a specific segmentation"
 )
-SAMPLING_FACTORS_ERROR = "sampling config names and their sampling map list is empty"
+SAMPLING_FACTORS_ERROR = "sampling config names and their sampling map list are empty"
 APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
 
 UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
-    f"\nNotice that should_use_authentication is set to False, which is not supported by"
+    f"Notice that should_use_authentication is set to False, which is not supported by"
     f" default and must be explicitly requested from Mona team."
 )
 
