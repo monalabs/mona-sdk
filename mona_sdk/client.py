@@ -117,18 +117,18 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
 
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
 UPLOAD_CONFIG_ERROR_MESSAGE = (
-    "Could not upload the new configuration, please check it is valid."
+    "Could not upload the new configuration, please check it is valid. "
 )
 RETRIEVE_CONFIG_HISTORY = "Retrieve history is empty"
 GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR = (
     "Could not get aggregates state of a specific segmentation"
 )
 SAMPLING_FACTORS_ERROR = "sampling config names and their sampling map list are empty"
-APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
+APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server. "
 
 UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
     f"Notice that should_use_authentication is set to False, which is not supported by"
-    f" default and must be explicitly requested from Mona team."
+    f" default and must be explicitly requested from Mona team. "
 )
 
 # The argument to use as a default value on the values of the data argument (dict) when
@@ -581,11 +581,11 @@ class Client:
         """
         if not author and not self.should_use_authentication:
             return self._handle_service_error(
-                "When using non authenticated client, author must be provided."
+                "When using non authenticated client, author must be provided. "
             )
 
         if not isinstance(config, dict):
-            return self._handle_service_error("config must be a dict.")
+            return self._handle_service_error("config must be a dict. ")
 
         keys_list = list(config.keys())
         if len(keys_list) == 1 and keys_list[0] == self._user_id:
@@ -603,6 +603,9 @@ class Client:
         # TODO(smadar): This line is here to workaround the fact  that there are 2
         #  different returned types in a case of a failure and success. To be removed
         #  when it's fixed.
+        if "error_messeage" != None:
+            return upload_response
+
         upload_response = upload_response if upload_response else {}
         response = upload_response.get("response_data", {}).get("new_config_id")
 
@@ -633,7 +636,7 @@ class Client:
 
         return (
             response
-            if "success" in response
+            if "error_message" != None
             else get_dict_result(True, response["response_data"], None)
         )
 
