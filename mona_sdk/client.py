@@ -603,7 +603,7 @@ class Client:
         # TODO(smadar): This line is here to workaround the fact  that there are 2
         #  different returned types in a case of a failure and success. To be removed
         #  when it's fixed.
-        if "error_messeage" != None:
+        if "error_messeage" in upload_response:
             return upload_response
 
         upload_response = upload_response if upload_response else {}
@@ -633,10 +633,9 @@ class Client:
                 "config": config,
             },
         )
-
         return (
             response
-            if "error_message" != None
+            if "error_message" in response
             else get_dict_result(True, response["response_data"], None)
         )
 
