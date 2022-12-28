@@ -808,7 +808,7 @@ class Client:
         start_time,
         end_time,
         segment,
-        sampling_factor,
+        sampling_factor=UNPROVIDED_VALUE,
         excluded_segments=UNPROVIDED_VALUE,
     ):
         """
