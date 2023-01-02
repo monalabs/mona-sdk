@@ -604,7 +604,11 @@ class Client:
         #  when it's fixed.
 
         return (
-            get_dict_result(False, None, {UPLOAD_CONFIG_ERROR_MESSAGE: upload_response["error_message"]})
+            get_dict_result(
+                False,
+                None,
+                {UPLOAD_CONFIG_ERROR_MESSAGE: upload_response["error_message"]},
+            )
             if "error_message" in upload_response
             else get_dict_result(True, upload_response["response_data"], None)
         )
@@ -794,9 +798,7 @@ class Client:
 
         return (
             self._handle_service_error(
-                ((list(app_server_response["issues"].values())[0]).__str__()).replace(
-                    "'", ""
-                )
+                (list(app_server_response["issues"].values())[0]).__str__()
             )
             if "issues" in app_server_response
             else get_dict_result(True, app_server_response, None)
