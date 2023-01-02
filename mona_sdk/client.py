@@ -801,7 +801,7 @@ class Client:
                 (list(app_server_response["issues"].values())[0]).__str__()
             )
             if "issues" in app_server_response
-            else get_dict_result(True, app_server_response, None)
+            else get_dict_result(True, "config is valid", None)
         )
 
     @Decorators.refresh_token_if_needed
