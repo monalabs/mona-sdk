@@ -649,12 +649,11 @@ class Client:
                     "raw_configuration_data"
                 ]
             }
-            res = get_dict_result(True, {"config_id": app_server_response}, None)
+            return get_dict_result(True, {"config_id": app_server_response}, None)
         except KeyError:
-            res = self._handle_service_error(SERVICE_ERROR_MESSAGE)
-        return res
-
-    @Decorators.refresh_token_if_needed
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
+ß
+    @Decorators.refresh_token_ifneeded
     def get_suggested_config(self):
         """
         A wrapper function for "Retrieve Suggested Config" REST endpoint. view full
@@ -664,10 +663,9 @@ class Client:
         app_server_response = self._app_server_request("get_new_config_fields")
         try:
             data = app_server_response["response_data"]["suggested_config"]
-            res = get_dict_result(True, f"suggested_config: {data}", None)
+            return get_dict_result(True, f"suggested_config: {data}", None)
         except KeyError:
-            res = self._handle_service_error(SERVICE_ERROR_MESSAGE)
-        return res
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     @Decorators.refresh_token_if_needed
     def get_config_history(self, number_of_revisions=UNPROVIDED_VALUE):
