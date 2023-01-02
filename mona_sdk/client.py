@@ -865,9 +865,10 @@ class Client:
         )
 
         return (
-            get_dict_result(True, app_server_response["response_data"], None)
-            if "success" not in app_server_response
-            else self._handle_service_error(app_server_response["error_message"])
+            self._handle_service_error(app_server_response["error_message"])
+            if "error_message" in app_server_response
+            # return the CRC's of the segment itself
+            else get_dict_result(True, len(app_server_response["response_data"]["crcs"]), None)
         )
 
     @Decorators.refresh_token_if_needed
