@@ -846,6 +846,7 @@ class Client:
         start_time,
         end_time,
         segment,
+        sampling_threshold=UNPROVIDED_VALUE,
         excluded_segments=UNPROVIDED_VALUE,
     ):
         """
@@ -861,6 +862,7 @@ class Client:
                 "end_time": end_time,
                 "segment": segment,
                 "excluded_segments": excluded_segments,
+                "sampling_threshold": sampling_threshold,
             },
         )
 
@@ -868,7 +870,9 @@ class Client:
             self._handle_service_error(app_server_response["error_message"])
             if "error_message" in app_server_response
             # return the CRC's of the segment itself
-            else get_dict_result(True, len(app_server_response["response_data"]["crcs"]), None)
+            else get_dict_result(
+                True, app_server_response["response_data"]["crcs"], None
+            )
         )
 
     @Decorators.refresh_token_if_needed
