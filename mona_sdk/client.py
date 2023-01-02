@@ -834,7 +834,7 @@ class Client:
         )
 
         return (
-            self._handle_service_error(app_server_response["error_message"])
+            app_server_response
             if "error_message" in app_server_response
             else get_dict_result(True, app_server_response["response_data"], None)
         )
