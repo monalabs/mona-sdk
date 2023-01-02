@@ -599,20 +599,14 @@ class Client:
         }
 
         upload_response = self._app_server_request("upload_config", config_to_upload)
-
         # TODO(smadar): This line is here to workaround the fact  that there are 2
         #  different returned types in a case of a failure and success. To be removed
         #  when it's fixed.
-        if "error_messeage" in upload_response:
-            return upload_response
-
-        upload_response = upload_response if upload_response else {}
-        response = upload_response.get("response_data", {}).get("new_config_id")
 
         return (
-            self._handle_service_error(UPLOAD_CONFIG_ERROR_MESSAGE)
-            if response is None
-            else get_dict_result(True, {"new_config_id": response}, None)
+            get_dict_result(False, None, {UPLOAD_CONFIG_ERROR_MESSAGE: upload_response["error_message"]})
+            if "error_message" in upload_response
+            else get_dict_result(True, upload_response["response_data"], None)
         )
 
     @Decorators.refresh_token_if_needed
