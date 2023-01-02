@@ -939,15 +939,15 @@ class Client:
                 "baseline_segment": baseline_segment,
             },
         )
-        # return response
+
         return (
-            get_dict_result(
+            app_server_response
+            if "error_message" in app_server_response
+            else get_dict_result(
                 True,
                 {"aggregated_data": app_server_response["response_data"].get("{}")},
                 None,
             )
-            if "success" not in app_server_response
-            else app_server_response
         )
 
     @Decorators.refresh_token_if_needed
@@ -994,11 +994,8 @@ class Client:
         )
 
         return (
-            self._handle_service_error(
-                GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR
-            )
-            if app_server_response is False
-            or "response_data" not in app_server_response
+            app_server_response
+            if "error_message" in app_server_response
             else get_dict_result(True, app_server_response["response_data"], None)
         )
 
