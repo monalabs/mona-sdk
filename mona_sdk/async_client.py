@@ -86,96 +86,129 @@ class AsyncClient(Client, metaclass=AsyncMeta):
     ):
         pass
 
-    def is_active(self):
-        pass
-
-    def upload_config(self, config, commit_message, author=None):
-        pass
-
-    def upload_config_per_context_class(
-            self, author, commit_message, context_class, config
+    def is_active_async(
+        self,
+        event_loop=None,
+        executor=None,
     ):
         pass
 
-    def get_config(self):
-        pass
-
-    def get_suggested_config(self):
-        pass
-
-    def get_config_history(self, number_of_revisions=UNPROVIDED_VALUE):
-        pass
-
-    def get_sampling_factors(self):
-        pass
-
-    def create_sampling_factor(self, config_name, sampling_factor, context_class=None):
-        pass
-
-    def validate_config(
-            self,
-            config,
-            list_of_context_ids=UNPROVIDED_VALUE,
-            latest_amount=UNPROVIDED_VALUE,
+    def upload_config_async(
+        self, config, commit_message, author=None, event_loop=None, executor=None
     ):
         pass
 
-    def get_insights(
-            self,
-            context_class,
-            min_segment_size,
-            insight_types=UNPROVIDED_VALUE,
-            metric_name=UNPROVIDED_VALUE,
-            min_insight_score=UNPROVIDED_VALUE,
-            time_range_seconds=UNPROVIDED_VALUE,
-            first_discovered_on_range_seconds=UNPROVIDED_VALUE,
+    def upload_config_per_context_class_async(
+        self,
+        author,
+        commit_message,
+        context_class,
+        config,
+        event_loop=None,
+        executor=None,
     ):
         pass
 
-    def get_ingested_data_for_a_specific_segment(
-            self,
-            context_class,
-            start_time,
-            end_time,
-            segment,
-            sampling_threshold=UNPROVIDED_VALUE,
-            excluded_segments=UNPROVIDED_VALUE,
+    def get_config_async(self, event_loop=None, executor=None):
+        pass
+
+    def get_suggested_config_async(self, event_loop=None, executor=None):
+        pass
+
+    def get_config_history_async(
+        self, number_of_revisions=UNPROVIDED_VALUE, event_loop=None, executor=None
     ):
         pass
 
-    def get_suggested_config_from_user_input(self, events):
+    def get_sampling_factors_async(self, event_loop=None, executor=None):
         pass
 
-    def get_aggregated_data_of_a_specific_segment(
-            self,
-            context_class,
-            timestamp_from,
-            timestamp_to,
-            time_series_resolutions=UNPROVIDED_VALUE,
-            with_histogram=UNPROVIDED_VALUE,
-            time_zone=UNPROVIDED_VALUE,
-            metrics=UNPROVIDED_VALUE,
-            requested_segments=UNPROVIDED_VALUE,
-            excluded_segments=UNPROVIDED_VALUE,
-            baseline_segment=UNPROVIDED_VALUE,
+    def create_sampling_factor_async(
+        self,
+        config_name,
+        sampling_factor,
+        context_class=None,
+        event_loop=None,
+        executor=None,
     ):
         pass
 
-    def get_aggregated_stats_of_a_specific_segmentation(
-            self,
-            context_class,
-            dimension,
-            target_time_range,
-            compared_time_range,
-            metric_1_field,
-            metric_2_field,
-            metric_1_type,
-            metric_2_type,
-            min_segment_size,
-            sort_function,
-            baseline_segment=UNPROVIDED_VALUE,
-            excluded_segments=UNPROVIDED_VALUE,
-            target_segments_filter=UNPROVIDED_VALUE,
-            compared_segments_filter=UNPROVIDED_VALUE,
+    def validate_config_async(
+        self,
+        config,
+        list_of_context_ids=UNPROVIDED_VALUE,
+        latest_amount=UNPROVIDED_VALUE,
+        event_loop=None,
+        executor=None,
+    ):
+        pass
+
+    def get_insights_async(
+        self,
+        context_class,
+        min_segment_size,
+        insight_types=UNPROVIDED_VALUE,
+        metric_name=UNPROVIDED_VALUE,
+        min_insight_score=UNPROVIDED_VALUE,
+        time_range_seconds=UNPROVIDED_VALUE,
+        first_discovered_on_range_seconds=UNPROVIDED_VALUE,
+        event_loop=None,
+        executor=None,
+    ):
+        pass
+
+    def get_ingested_data_for_a_specific_segment_async(
+        self,
+        context_class,
+        start_time,
+        end_time,
+        segment,
+        sampling_threshold=UNPROVIDED_VALUE,
+        excluded_segments=UNPROVIDED_VALUE,
+        event_loop=None,
+        executor=None,
+    ):
+        pass
+
+    def get_suggested_config_from_user_input_async(
+        self, events, event_loop=None, executor=None
+    ):
+        pass
+
+    def get_aggregated_data_of_a_specific_segment_async(
+        self,
+        context_class,
+        timestamp_from,
+        timestamp_to,
+        time_series_resolutions=UNPROVIDED_VALUE,
+        with_histogram=UNPROVIDED_VALUE,
+        time_zone=UNPROVIDED_VALUE,
+        metrics=UNPROVIDED_VALUE,
+        requested_segments=UNPROVIDED_VALUE,
+        excluded_segments=UNPROVIDED_VALUE,
+        baseline_segment=UNPROVIDED_VALUE,
+        event_loop=None,
+        executor=None,
+    ):
+        pass
+
+    def get_aggregated_stats_of_a_specific_segmentation_async(
+        self,
+        context_class,
+        dimension,
+        target_time_range,
+        compared_time_range,
+        metric_1_field,
+        metric_2_field,
+        metric_1_type,
+        metric_2_type,
+        min_segment_size,
+        sort_function,
+        baseline_segment=UNPROVIDED_VALUE,
+        excluded_segments=UNPROVIDED_VALUE,
+        target_segments_filter=UNPROVIDED_VALUE,
+        compared_segments_filter=UNPROVIDED_VALUE,
+        event_loop=None,
+        executor=None,
     ):
         pass
