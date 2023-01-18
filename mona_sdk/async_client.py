@@ -66,7 +66,7 @@ class AsyncClient(Client, metaclass=AsyncMeta):
         self._executor = executor
 
     # We add the signatures of the public methods of the synchronous client because the
-    # IDE raises warning for methods that doesn't appear literally in the class.
+    # IDE raises warning for methods that doesn't appear explicitly in the class.
     def export_async(
         self,
         message: MonaSingleMessage,
