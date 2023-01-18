@@ -320,10 +320,10 @@ class Client:
         return decoded_token["tenantId"]
 
     @staticmethod
-    def filter_none_fields(message):
+    def _filter_none_fields(message):
         return {key: val for key, val in message.items() if val is not None}
 
-    def should_filter_none_fields(self, filter_none_fields):
+    def _should_filter_none_fields(self, filter_none_fields):
         """
         :param filter_none_fields:
             The value the export function got for filter_none_fields.
@@ -446,8 +446,8 @@ class Client:
                 )
                 continue
 
-            if self.should_filter_none_fields(filter_none_fields):
-                message_copy["message"] = self.filter_none_fields(
+            if self._should_filter_none_fields(filter_none_fields):
+                message_copy["message"] = self._filter_none_fields(
                     message_copy["message"]
                 )
             # If the message was left empty after it was filtered, we don't want it to
