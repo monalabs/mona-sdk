@@ -772,6 +772,23 @@ class Client:
             },
         )
 
+    def validate_config_per_context_class(
+            self,
+            config,
+            context_class,
+            list_of_context_ids=UNPROVIDED_VALUE,
+            latest_amount=UNPROVIDED_VALUE,
+    ):
+        return self._app_server_request(
+            "validate_config",
+            data={
+                "config": config,
+                "context_class": context_class,
+                "list_of_context_ids": list_of_context_ids,
+                "latest_amount": latest_amount,
+            }
+        )
+
     @Decorators.refresh_token_if_needed
     def get_insights(
         self,
