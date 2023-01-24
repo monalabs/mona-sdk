@@ -753,6 +753,7 @@ class Client:
             else "Sampling factor created successfully."
         )
 
+    @Decorators.refresh_token_if_needed
     def validate_config(
         self,
         config,
@@ -760,7 +761,7 @@ class Client:
         latest_amount=UNPROVIDED_VALUE,
     ):
         """
-        A wrapper function for "Validate Config" REST endpoint. view full documentation
+        A wrapper function for "Validate Config" REST endpoint. View full documentation
         here: https://docs.monalabs.io/docs/validate-config-via-rest-api
         """
         return self._app_server_request(
@@ -770,6 +771,30 @@ class Client:
                 "list_of_context_ids": list_of_context_ids,
                 "latest_amount": latest_amount,
             },
+        )
+
+    @Decorators.refresh_token_if_needed
+    def validate_config_per_context_class(
+            self,
+            config,
+            context_class,
+            list_of_context_ids=UNPROVIDED_VALUE,
+            latest_amount=UNPROVIDED_VALUE,
+    ):
+        """
+        A wrapper function for "Validate Config Per Context Class" REST endpoint.
+        View full documentation here:
+        https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api
+        """
+        return self._app_server_request(
+            "validate_config_per_context_class",
+            data={
+                "user_id": self._user_id,
+                "config": config,
+                "context_class": context_class,
+                "list_of_context_ids": list_of_context_ids,
+                "latest_amount": latest_amount,
+            }
         )
 
     @Decorators.refresh_token_if_needed
