@@ -753,6 +753,7 @@ class Client:
             else "Sampling factor created successfully."
         )
 
+    @Decorators.refresh_token_if_needed
     def validate_config(
         self,
         config,
@@ -772,6 +773,7 @@ class Client:
             },
         )
 
+    @Decorators.refresh_token_if_needed
     def validate_config_per_context_class(
             self,
             config,
