@@ -780,8 +780,9 @@ class Client:
             latest_amount=UNPROVIDED_VALUE,
     ):
         return self._app_server_request(
-            "validate_config",
+            "validate_config_per_context_class",
             data={
+                "user_id": self._user_id,
                 "config": config,
                 "context_class": context_class,
                 "list_of_context_ids": list_of_context_ids,
