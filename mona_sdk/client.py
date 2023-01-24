@@ -761,7 +761,7 @@ class Client:
         latest_amount=UNPROVIDED_VALUE,
     ):
         """
-        A wrapper function for "Validate Config" REST endpoint. view full documentation
+        A wrapper function for "Validate Config" REST endpoint. View full documentation
         here: https://docs.monalabs.io/docs/validate-config-via-rest-api
         """
         return self._app_server_request(
@@ -783,6 +783,8 @@ class Client:
     ):
         """
         A wrapper function for "Validate Config Per Context Class" REST endpoint.
+        View full documentation here:
+        https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api
         """
         return self._app_server_request(
             "validate_config_per_context_class",
