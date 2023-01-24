@@ -779,6 +779,9 @@ class Client:
             list_of_context_ids=UNPROVIDED_VALUE,
             latest_amount=UNPROVIDED_VALUE,
     ):
+        """
+        A wrapper function for "Validate Config Per Context Class" REST endpoint.
+        """
         return self._app_server_request(
             "validate_config_per_context_class",
             data={
