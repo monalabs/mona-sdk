@@ -117,14 +117,16 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
 
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
 UPLOAD_CONFIG_ERROR_MESSAGE = (
-    "Could not upload the new configuration, please check it is valid. "
+    "Could not upload the new configuration, please check it is valid"
 )
-RETRIEVE_CONFIG_HISTORY = "Retrieve history is empty"
+RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
 GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR = (
     "Could not get aggregates state of a specific segmentation"
 )
-SAMPLING_FACTORS_ERROR = "sampling config names and their sampling map list are empty"
-APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server. "
+SAMPLING_FACTORS_EMPTY_MAPPING_ERROR = (
+    "sampling config names and their sampling map list are empty"
+)
+APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
 
 UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
     f"Notice that should_use_authentication is set to False, which is not supported by"
@@ -599,9 +601,6 @@ class Client:
         }
 
         upload_response = self._app_server_request("upload_config", config_to_upload)
-        # TODO(smadar): This line is here to workaround the fact  that there are 2
-        #  different returned types in a case of a failure and success. To be removed
-        #  when it's fixed.
 
         return (
             get_dict_result(
@@ -652,8 +651,8 @@ class Client:
             return get_dict_result(True, {"config_id": app_server_response}, None)
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
-ß
-    @Decorators.refresh_token_ifneeded
+
+    @Decorators.refresh_token_if_needed
     def get_suggested_config(self):
         """
         A wrapper function for "Retrieve Suggested Config" REST endpoint. view full
@@ -663,7 +662,7 @@ class Client:
         app_server_response = self._app_server_request("get_new_config_fields")
         try:
             data = app_server_response["response_data"]["suggested_config"]
-            return get_dict_result(True, f"suggested_config: {data}", None)
+            return get_dict_result(True, data, None)
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -678,10 +677,15 @@ class Client:
 
         return (
             get_dict_result(
-                True, {app_server_response["msg"]: app_server_response["configs"]}, None
+                True,
+                {
+                    app_server_response["msg"]: app_server_response["configs"],
+                    "number_of_revisions": number_of_revisions,
+                },
+                None,
             )
-            if app_server_response["msg"] is not None
-            else self._handle_service_error(RETRIEVE_CONFIG_HISTORY)
+            if app_server_response.get("msg") is not None
+            else self._handle_service_error(RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE)
         )
 
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
@@ -745,7 +749,7 @@ class Client:
         )
 
         return (
-            self._handle_service_error(SAMPLING_FACTORS_ERROR)
+            self._handle_service_error(SAMPLING_FACTORS_EMPTY_MAPPING_ERROR)
             if app_server_response is False
             else get_dict_result(True, app_server_response["response_data"], None)
         )
@@ -763,7 +767,7 @@ class Client:
                 "context_class": context_class,
             },
         )
-        error_message = app_server_response["error_message"]
+        error_message = app_server_response.get("error_message")
 
         return (
             self._handle_service_error(error_message)
@@ -792,14 +796,12 @@ class Client:
                 "list_of_context_ids": list_of_context_ids,
                 "latest_amount": latest_amount,
             },
-        )["response_data"]
+        ).get("response_data")
 
         return (
-            self._handle_service_error(
-                (list(app_server_response["issues"].values())[0]).__str__()
-            )
-            if "issues" in app_server_response
-            else get_dict_result(True, "config is valid", None)
+            self._handle_service_error(str(app_server_response.get("issues")))
+            if app_server_response is not None and "issues" in app_server_response
+            else get_dict_result(True, True, None)
         )
 
     @Decorators.refresh_token_if_needed
@@ -832,7 +834,7 @@ class Client:
         )
 
         return (
-            app_server_response
+            self._handle_service_error(app_server_response["error_message"])
             if "error_message" in app_server_response
             else get_dict_result(True, app_server_response["response_data"], None)
         )
@@ -889,12 +891,8 @@ class Client:
             get_dict_result(
                 True,
                 {
-                    "suggested_config": (
-                        list(
-                            app_server_response["response_data"][
-                                "suggested_config"
-                            ].values()
-                        )[0]
+                    "suggested_config": app_server_response.get("response_data").get(
+                        "suggested_config"
                     )
                 },
                 None,
@@ -937,7 +935,6 @@ class Client:
                 "baseline_segment": baseline_segment,
             },
         )
-
         return (
             app_server_response
             if "error_message" in app_server_response
