@@ -143,6 +143,15 @@ class AsyncClient(Client, metaclass=AsyncMeta):
     ):
         pass
 
+    def validate_config_per_context_class(
+        self,
+        config,
+        context_class,
+        list_of_context_ids=UNPROVIDED_VALUE,
+        latest_amount=UNPROVIDED_VALUE,
+    ):
+        pass
+
     def get_insights_async(
         self,
         context_class,
