@@ -115,23 +115,23 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
     "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
 )
 
+UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
+    f"Notice that should_use_authentication is set to False, which is not supported by"
+    f" default and must be explicitly requested from Mona team. "
+)
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
 UPLOAD_CONFIG_ERROR_MESSAGE = (
     "Could not upload the new configuration, please check it is valid"
 )
 RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
-GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR = (
+GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR_MESSAGE = (
     "Could not get aggregates state of a specific segmentation"
 )
-SAMPLING_FACTORS_EMPTY_MAPPING_ERROR = (
+SAMPLING_FACTORS_EMPTY_MAPPING_ERROR_MESSAGE = (
     "sampling config names and their sampling map list are empty"
 )
 APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
 
-UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
-    f"Notice that should_use_authentication is set to False, which is not supported by"
-    f" default and must be explicitly requested from Mona team. "
-)
 
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
