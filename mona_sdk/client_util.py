@@ -77,9 +77,6 @@ def keep_message_after_sampling(context_id, sampling_rate):
         return random.random() <= sampling_rate
 
 def get_dict_result(success, data, error_message):
-    # this removal of double quotes is needed to make things prettier
-    if isinstance(error_message, str):
-        error_message = error_message.replace("\"", "")
     return {
         "success": success,
         "data": data,
