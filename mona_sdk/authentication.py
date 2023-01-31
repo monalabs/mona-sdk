@@ -254,7 +254,7 @@ def _handle_authentications_error(
         get_logger().error(f"Failed to send the following to mona: {message_to_log}")
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)
-    return {"success": False, "data": None, "error_message": error_message}
+    return False
 
 
 def _should_refresh_token(api_key):
