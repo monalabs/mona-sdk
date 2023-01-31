@@ -254,7 +254,7 @@ When using AsyncClient, while all the regular (synchronous) client functions are
   - executor (TreadPoolExecutor): (optional) This overrides the executor provided for the AsyncClient constructor. 
 
 
-**An example for using export_batch_async to send data to Mona asynchronously, and then printing the result and exception if there were**:
+**An example for using export_batch_async to send data to Mona asynchronously, and then printing the result and exception (if occurred)**:
 ```
 from mona_sdk.client import AsyncClient, MonaSingleMessage
 import asyncio
