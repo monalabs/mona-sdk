@@ -143,7 +143,7 @@ class AsyncClient(Client, metaclass=AsyncMeta):
     ):
         pass
 
-    def validate_config_per_context_class(
+    def validate_config_per_context_class_async(
         self,
         config,
         context_class,
