@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+import json
 import os
 import logging
 from json import JSONDecodeError
@@ -120,18 +121,15 @@ UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
     f" default and must be explicitly requested from Mona team. "
 )
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
-UPLOAD_CONFIG_ERROR_MESSAGE = (
-    "Could not upload the new configuration, please check it is valid"
-)
+
 RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
 GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR_MESSAGE = (
     "Could not get aggregates state of a specific segmentation"
 )
-SAMPLING_FACTORS_EMPTY_MAPPING_ERROR_MESSAGE = (
-    "sampling config names and their sampling map list are empty"
-)
+
 APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
 
+CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE = "config must be a dict"
 
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
@@ -587,7 +585,7 @@ class Client:
             )
 
         if not isinstance(config, dict):
-            return self._handle_service_error("config must be a dict. ")
+            return self._handle_service_error(CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE)
 
         keys_list = list(config.keys())
         if len(keys_list) == 1 and keys_list[0] == self._user_id:
@@ -606,7 +604,7 @@ class Client:
             get_dict_result(
                 False,
                 None,
-                {UPLOAD_CONFIG_ERROR_MESSAGE: upload_response["error_message"]},
+                upload_response["error_message"],
             )
             if "error_message" in upload_response
             else get_dict_result(True, upload_response["response_data"], None)
@@ -648,7 +646,7 @@ class Client:
                     "raw_configuration_data"
                 ]
             }
-            return get_dict_result(True, {"config_id": app_server_response}, None)
+            return get_dict_result(True, app_server_response, None)
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -748,9 +746,10 @@ class Client:
             data={"config_name": self._sampling_config_name},
         )
 
+        error_message = app_server_response.get("error_message")
         return (
-            self._handle_service_error(SAMPLING_FACTORS_EMPTY_MAPPING_ERROR)
-            if app_server_response is False
+            self._handle_service_error(error_message)
+            if error_message
             else get_dict_result(True, app_server_response["response_data"], None)
         )
 
@@ -774,7 +773,7 @@ class Client:
             if error_message
             else get_dict_result(
                 True,
-                f"New context_class: {context_class}",
+                True,
                 None,
             )
         )
@@ -797,28 +796,33 @@ class Client:
                 "list_of_context_ids": list_of_context_ids,
                 "latest_amount": latest_amount,
             },
-        ).get("response_data")
+        )
+        error_message = app_server_response.get("error_message")
+        if error_message:
+            return self._handle_service_error(error_message)
+
+        app_server_response = app_server_response.get("response_data")
 
         return (
-            self._handle_service_error(str(app_server_response.get("issues")))
-            if app_server_response is not None and "issues" in app_server_response
-            else get_dict_result(True, True, None)
+            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            if app_server_response and "issues" in app_server_response
+            else get_dict_result(True, app_server_response, None)
         )
 
     @Decorators.refresh_token_if_needed
     def validate_config_per_context_class(
-            self,
-            config,
-            context_class,
-            list_of_context_ids=UNPROVIDED_VALUE,
-            latest_amount=UNPROVIDED_VALUE,
+        self,
+        config,
+        context_class,
+        list_of_context_ids=UNPROVIDED_VALUE,
+        latest_amount=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Validate Config Per Context Class" REST endpoint.
         View full documentation here:
         https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "validate_config_per_context_class",
             data={
                 "user_id": self._user_id,
@@ -826,7 +830,17 @@ class Client:
                 "context_class": context_class,
                 "list_of_context_ids": list_of_context_ids,
                 "latest_amount": latest_amount,
-            }
+            },
+        )
+        error_message = app_server_response.get("error_message")
+
+        if error_message:
+            return self._handle_service_error(error_message)
+
+        return (
+            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            if app_server_response and "issues" in app_server_response
+            else get_dict_result(True, app_server_response, None)
         )
 
     @Decorators.refresh_token_if_needed
@@ -912,19 +926,11 @@ class Client:
             data={"events": events},
         )
 
-        return (
-            get_dict_result(
-                True,
-                {
-                    "suggested_config": app_server_response.get("response_data").get(
-                        "suggested_config"
-                    )
-                },
-                None,
-            )
-            if app_server_response
-            else self._handle_service_error(SERVICE_ERROR_MESSAGE)
-        )
+        try:
+            data = app_server_response["response_data"]["suggested_config"]
+            return get_dict_result(True, data, None)
+        except KeyError:
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     @Decorators.refresh_token_if_needed
     def get_aggregated_data_of_a_specific_segment(
