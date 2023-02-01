@@ -91,8 +91,6 @@ You can see all functions info and examples on [our docs](https://docs.monalabs.
 
 #### [get_suggested_config](https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api)
 #### [validate_config](https://docs.monalabs.io/docs/validate-config-via-rest-api)
-#### [validate_config_per_context_class](https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api)
-#### [upload_config](https://docs.monalabs.io/docs/upload-config-via-rest)
 #### [upload_config_per_context_class](https://docs.monalabs.io/docs/upload-config-per-context-class-via-rest-api)
 #### [get_config_history](https://docs.monalabs.io/docs/retrieve-config-history-via-rest-api)
 #### [get_insights](https://docs.monalabs.io/docs/retrieve-insights-using-the-rest-api)
