@@ -116,9 +116,9 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
     "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
 )
 
-UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
-    f"Notice that should_use_authentication is set to False, which is not supported by"
-    f" default and must be explicitly requested from Mona team. "
+UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
+    "Notice that should_use_authentication is set to False, which is not supported by "
+    "default and must be explicitly requested from Mona team. "
 )
 SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
 
@@ -494,7 +494,7 @@ class Client:
                     f"All {client_response['total']} messages have been sent."
                 )
             else:
-                self._logger.info(f"No messages were sampled in this batch.")
+                self._logger.info("No messages were sampled in this batch.")
 
         return client_response
 
@@ -1046,7 +1046,7 @@ class Client:
         return (
             ""
             if self.should_use_authentication
-            else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
+            else UNAUTHENTICATED_CHECK_ERROR_MESSAGE
         )
 
     def _app_server_request(self, endpoint_name, data=None):
