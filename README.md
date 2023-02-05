@@ -89,8 +89,11 @@ You can see all functions info and examples on [our docs](https://docs.monalabs.
 
 ### The available services are:
 
+#### [get_config](https://docs.monalabs.io/docs/retrieve-current-config-file)
 #### [get_suggested_config](https://docs.monalabs.io/docs/retrieve-suggested-config-via-rest-api)
 #### [validate_config](https://docs.monalabs.io/docs/validate-config-via-rest-api)
+#### [validate_config_per_context_class](https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api)
+#### [upload_config](https://docs.monalabs.io/docs/upload-config-via-rest)
 #### [upload_config_per_context_class](https://docs.monalabs.io/docs/upload-config-per-context-class-via-rest-api)
 #### [get_config_history](https://docs.monalabs.io/docs/retrieve-config-history-via-rest-api)
 #### [get_insights](https://docs.monalabs.io/docs/retrieve-insights-using-the-rest-api)
@@ -251,7 +254,7 @@ When using AsyncClient, while all the regular (synchronous) client functions are
   - executor (TreadPoolExecutor): (optional) This overrides the executor provided for the AsyncClient constructor. 
 
 
-**An example for using export_batch_async to send data to Mona asynchronously**:
+**An example for using export_batch_async to send data to Mona asynchronously, and then printing the result and exception (if occurred)**:
 ```
 from mona_sdk.client import AsyncClient, MonaSingleMessage
 import asyncio
@@ -273,7 +276,9 @@ def main():
             )
         )
 
-    asyncio.create_task(my_mona_async_client.export_batch_async(messages_batch_to_mona))
-
+    task = asyncio.create_task(my_mona_async_client.export_batch_async(messages_batch_to_mona))
+    await task
+    print(task.result())
+    print(task.exception())
 asyncio.run(main())
 ```
