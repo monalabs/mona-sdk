@@ -28,6 +28,7 @@ import requests
 from requests.models import Response
 
 from .logger import get_logger
+from .client_util import get_dict_result
 from .client_exceptions import MonaAuthenticationException
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
@@ -254,7 +255,7 @@ def _handle_authentications_error(
         get_logger().error(f"Failed to send the following to mona: {message_to_log}")
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)
-    return False
+    return get_dict_result(False, None, error_message)
 
 
 def _should_refresh_token(api_key):

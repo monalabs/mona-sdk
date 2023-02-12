@@ -7,7 +7,7 @@ from json import JSONDecodeError
 from mona_sdk.client_exceptions import MonaInitializationException
 
 NORMALIZED_HASH_DECIMAL_DIGITS = 7
-NORMALIZED_HASH_PRECISION = 10 ** NORMALIZED_HASH_DECIMAL_DIGITS
+NORMALIZED_HASH_PRECISION = 10**NORMALIZED_HASH_DECIMAL_DIGITS
 
 
 def get_boolean_value_for_env_var(env_var, default_value):
@@ -75,3 +75,7 @@ def keep_message_after_sampling(context_id, sampling_rate):
     else:
         # TODO(Nemo): Allow getting seed from the user for random.random().
         return random.random() <= sampling_rate
+
+
+def get_dict_result(success, data, error_message):
+    return {"success": success, "data": data, "error_message": error_message}

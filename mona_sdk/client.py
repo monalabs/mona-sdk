@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
+import json
 import os
 import logging
 from json import JSONDecodeError
@@ -23,8 +24,8 @@ import jwt
 import requests
 from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
-
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -34,6 +35,7 @@ from .validation import (
     mona_messages_to_dicts_validation,
 )
 from .client_util import (
+    get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
     keep_message_after_sampling,
@@ -114,16 +116,20 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
     "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
 )
 
-SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service."
-UPLOAD_CONFIG_ERROR_MESSAGE = (
-    "Could not upload the new configuration, please check it is valid."
+UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
+    "Notice that should_use_authentication is set to False, which is not supported by "
+    "default and must be explicitly requested from Mona team. "
 )
-APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server."
+SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
 
-UNAUTHENTICATED_ERROR_CHECK_MESSAGE = (
-    "\nNotice that should_use_authentication is set to False, which is not supported by"
-    " default and must be explicitly requested from Mona team."
+RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
+GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR_MESSAGE = (
+    "Could not get aggregates state of a specific segmentation"
 )
+
+APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
+
+CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE = "config must be a dict"
 
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
@@ -488,7 +494,7 @@ class Client:
                     f"All {client_response['total']} messages have been sent."
                 )
             else:
-                self._logger.info(f"No messages were sampled in this batch.")
+                self._logger.info("No messages were sampled in this batch.")
 
         return client_response
 
@@ -573,17 +579,13 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
-        failure_upload_output = {"success": False, "new_config_id": ""}
-
         if not author and not self.should_use_authentication:
-            self._handle_service_error(
-                "When using non authenticated client, author must be provided."
+            return self._handle_service_error(
+                "When using non authenticated client, author must be provided. "
             )
-            return failure_upload_output
 
         if not isinstance(config, dict):
-            self._handle_service_error("config must be a dict.")
-            return failure_upload_output
+            return self._handle_service_error(CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE)
 
         keys_list = list(config.keys())
         if len(keys_list) == 1 and keys_list[0] == self._user_id:
@@ -598,18 +600,15 @@ class Client:
 
         upload_response = self._app_server_request("upload_config", config_to_upload)
 
-        # TODO(smadar): This line is here to workaround the fact  that there are 2
-        #  different returned types in a case of a failure and success. To be removed
-        #  when it's fixed.
-        upload_response = upload_response if upload_response else {}
         return (
-            {
-                "new_config_id": upload_response.get("response_data", {}).get(
-                    "new_config_id"
-                ),
-                "success": True,
-            }
-        ) if upload_response else failure_upload_output
+            get_dict_result(
+                False,
+                None,
+                upload_response["error_message"],
+            )
+            if "error_message" in upload_response
+            else get_dict_result(True, upload_response["response_data"], None)
+        )
 
     @Decorators.refresh_token_if_needed
     def upload_config_per_context_class(
@@ -629,8 +628,11 @@ class Client:
                 "config": config,
             },
         )
-
-        return app_server_response
+        return (
+            app_server_response
+            if "error_message" in app_server_response
+            else get_dict_result(True, app_server_response["response_data"], None)
+        )
 
     @Decorators.refresh_token_if_needed
     def get_config(self):
@@ -639,11 +641,12 @@ class Client:
         """
         app_server_response = self._app_server_request("configs")
         try:
-            return {
+            app_server_response = {
                 self._user_id: app_server_response["response_data"][
                     "raw_configuration_data"
                 ]
             }
+            return get_dict_result(True, app_server_response, None)
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -656,7 +659,8 @@ class Client:
         """
         app_server_response = self._app_server_request("get_new_config_fields")
         try:
-            return app_server_response["response_data"]["suggested_config"]
+            data = app_server_response["response_data"]["suggested_config"]
+            return get_dict_result(True, data, None)
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -667,8 +671,19 @@ class Client:
         documentation here:
         https://docs.monalabs.io/docs/retrieve-config-history-via-rest-api
         """
-        return self._app_server_request(
-            "get_config_history", data={"number_of_revisions": number_of_revisions}
+        app_server_response = self._app_server_request("get_config_history")
+
+        return (
+            get_dict_result(
+                True,
+                {
+                    app_server_response["msg"]: app_server_response["configs"],
+                    "number_of_revisions": number_of_revisions,
+                },
+                None,
+            )
+            if app_server_response.get("msg") is not None
+            else self._handle_service_error(RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE)
         )
 
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
@@ -726,17 +741,24 @@ class Client:
         When the client is initiated with a config name, only the matching config
         details will be returned (if exists).
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "get_sampling_factors",
             data={"config_name": self._sampling_config_name},
-        )["response_data"]
+        )
+
+        error_message = app_server_response.get("error_message")
+        return (
+            self._handle_service_error(error_message)
+            if error_message
+            else get_dict_result(True, app_server_response["response_data"], None)
+        )
 
     @Decorators.refresh_token_if_needed
     def create_sampling_factor(self, config_name, sampling_factor, context_class=None):
         """
         A wrapper function for "Create sampling factor" REST endpoint.
         """
-        response = self._app_server_request(
+        app_server_response = self._app_server_request(
             "create_sampling_factor",
             data={
                 "config_name": config_name,
@@ -744,13 +766,16 @@ class Client:
                 "context_class": context_class,
             },
         )
-
-        error_message = response["error_message"]
+        error_message = app_server_response.get("error_message")
 
         return (
-            f"Failed to create sampling factor: {error_message}"
+            self._handle_service_error(error_message)
             if error_message
-            else "Sampling factor created successfully."
+            else get_dict_result(
+                True,
+                True,
+                None,
+            )
         )
 
     @Decorators.refresh_token_if_needed
@@ -764,7 +789,7 @@ class Client:
         A wrapper function for "Validate Config" REST endpoint. View full documentation
         here: https://docs.monalabs.io/docs/validate-config-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "validate_config",
             data={
                 "config": config,
@@ -772,21 +797,32 @@ class Client:
                 "latest_amount": latest_amount,
             },
         )
+        error_message = app_server_response.get("error_message")
+        if error_message:
+            return self._handle_service_error(error_message)
+
+        app_server_response = app_server_response.get("response_data")
+
+        return (
+            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            if app_server_response and "issues" in app_server_response
+            else get_dict_result(True, app_server_response, None)
+        )
 
     @Decorators.refresh_token_if_needed
     def validate_config_per_context_class(
-            self,
-            config,
-            context_class,
-            list_of_context_ids=UNPROVIDED_VALUE,
-            latest_amount=UNPROVIDED_VALUE,
+        self,
+        config,
+        context_class,
+        list_of_context_ids=UNPROVIDED_VALUE,
+        latest_amount=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Validate Config Per Context Class" REST endpoint.
         View full documentation here:
         https://docs.monalabs.io/docs/validate-config-per-context-class-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "validate_config_per_context_class",
             data={
                 "user_id": self._user_id,
@@ -794,7 +830,17 @@ class Client:
                 "context_class": context_class,
                 "list_of_context_ids": list_of_context_ids,
                 "latest_amount": latest_amount,
-            }
+            },
+        )
+        error_message = app_server_response.get("error_message")
+
+        if error_message:
+            return self._handle_service_error(error_message)
+
+        return (
+            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            if app_server_response and "issues" in app_server_response
+            else get_dict_result(True, app_server_response, None)
         )
 
     @Decorators.refresh_token_if_needed
@@ -813,7 +859,7 @@ class Client:
         documentation here:
         https://docs.monalabs.io/docs/retrieve-insights-using-the-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "insights",
             data={
                 "context_class": context_class,
@@ -824,6 +870,12 @@ class Client:
                 "time_range_seconds": time_range_seconds,
                 "first_discovered_on_range_seconds": first_discovered_on_range_seconds,
             },
+        )
+
+        return (
+            self._handle_service_error(app_server_response["error_message"])
+            if "error_message" in app_server_response
+            else get_dict_result(True, app_server_response["response_data"], None)
         )
 
     @Decorators.refresh_token_if_needed
@@ -841,7 +893,7 @@ class Client:
         endpoint. view full documentation here:
         https://docs.monalabs.io/docs/retrieve-ingested-data-for-a-specific-segment-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "get_ingested_data",
             data={
                 "context_class": context_class,
@@ -849,8 +901,17 @@ class Client:
                 "end_time": end_time,
                 "segment": segment,
                 "excluded_segments": excluded_segments,
-                "sampling_threshold": sampling_threshold
+                "sampling_threshold": sampling_threshold,
             },
+        )
+
+        return (
+            self._handle_service_error(app_server_response["error_message"])
+            if "error_message" in app_server_response
+            # return the CRC's of the segment itself
+            else get_dict_result(
+                True, app_server_response["response_data"]["crcs"], None
+            )
         )
 
     @Decorators.refresh_token_if_needed
@@ -864,10 +925,12 @@ class Client:
             "suggest_new_config",
             data={"events": events},
         )
-        if "response_data" not in app_server_response:
-            self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
-        return app_server_response
+        try:
+            data = app_server_response["response_data"]["suggested_config"]
+            return get_dict_result(True, data, None)
+        except KeyError:
+            return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     @Decorators.refresh_token_if_needed
     def get_aggregated_data_of_a_specific_segment(
@@ -888,7 +951,7 @@ class Client:
         endpoint. view full documentation here:
         https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api
         """
-        return self._app_server_request(
+        app_server_response = self._app_server_request(
             "get_segment",
             data={
                 "context_class": context_class,
@@ -902,6 +965,15 @@ class Client:
                 "excluded_segments": excluded_segments,
                 "baseline_segment": baseline_segment,
             },
+        )
+        return (
+            app_server_response
+            if "error_message" in app_server_response
+            else get_dict_result(
+                True,
+                {"aggregated_data": app_server_response["response_data"].get("{}")},
+                None,
+            )
         )
 
     @Decorators.refresh_token_if_needed
@@ -947,12 +1019,11 @@ class Client:
             },
         )
 
-        if "response_data" not in app_server_response:
-            self._handle_service_error(
-                f"{SERVICE_ERROR_MESSAGE} Server response: {app_server_response}"
-            )
-
-        return app_server_response
+        return (
+            app_server_response
+            if "error_message" in app_server_response
+            else get_dict_result(True, app_server_response["response_data"], None)
+        )
 
     def _handle_service_error(self, error_message):
         """
@@ -964,7 +1035,7 @@ class Client:
         self._logger.error(error_message)
         if self.raise_service_exceptions:
             raise MonaServiceException(error_message)
-        return False
+        return get_dict_result(False, None, error_message)
 
     def _get_unauthenticated_mode_error_message(self):
         """
@@ -975,7 +1046,7 @@ class Client:
         return (
             ""
             if self.should_use_authentication
-            else UNAUTHENTICATED_ERROR_CHECK_MESSAGE
+            else UNAUTHENTICATED_CHECK_ERROR_MESSAGE
         )
 
     def _app_server_request(self, endpoint_name, data=None):
