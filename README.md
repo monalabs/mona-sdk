@@ -86,6 +86,7 @@ export_result = my_mona_client.export_batch(
 ## Mona SDK services
 Mona sdk provides a simple API to access your information and control your configuration and data on Mona.
 You can see all functions info and examples on [our docs](https://docs.monalabs.io/docs) under REST API.
+Notice that the responses match the 'Service responses' section below.
 
 ### The available services are:
 
@@ -102,11 +103,18 @@ You can see all functions info and examples on [our docs](https://docs.monalabs.
 #### [get_aggregated_data_of_a_specific_segment](https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api)
 #### [get_aggregated_stats_of_a_specific_segmentation](https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api)
 
-#### Get your current Mona configuration:
+
+#### Service response:
+The structure of the response for the different services is as follows:
 ```
-my_current_mona_config = my_client.get_config()
+{
+    "success": <was the request successful>, (bool)
+    "data": <the returned response data> (str|dict|list|None)
+    "error_message": <explains the error, if occured> (str)
+}
 ```
-#### Upload a new configuration:
+
+#### Example - upload a new configuration:
 
 Arguments:
     
@@ -133,7 +141,8 @@ upload_result = my_client.upload_config(new_configuration, "My commit message", 
 # the return value format will be:
 # upload_result == {
 #    "success": <was the upload successful>, (bool)
-#    "new_config_id": <the new configuration ID> (str)
+#    "data": {"new_config_id": <the new configuration ID> (str), "new_config":<the config that was uploaded> (dict)}
+#    "error_message": <explains the error, if occured> (str)
 #}
 ```
 
