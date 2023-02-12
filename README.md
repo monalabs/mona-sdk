@@ -86,7 +86,8 @@ export_result = my_mona_client.export_batch(
 ## Mona SDK services
 Mona sdk provides a simple API to access your information and control your configuration and data on Mona.
 You can see all functions info and examples on [our docs](https://docs.monalabs.io/docs) under REST API.
-Notice that the responses match the 'Service responses' section below.
+Notice that the responses (since version 0.0.46) match the 'Service responses' section below, which is a 
+bit different from the responses for the REST API.
 
 ### The available services are:
 
