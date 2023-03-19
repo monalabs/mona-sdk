@@ -266,7 +266,8 @@ When using AsyncClient, while all the regular (synchronous) client functions are
 
 **An example for using export_batch_async to send data to Mona asynchronously, and then printing the result and exception (if occurred)**:
 ```
-from mona_sdk.client import AsyncClient, MonaSingleMessage
+from mona_sdk import MonaSingleMessage
+from mona_sdk.async_client import AsyncClient
 import asyncio
 
 def main():
