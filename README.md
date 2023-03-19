@@ -270,7 +270,7 @@ from mona_sdk import MonaSingleMessage
 from mona_sdk.async_client import AsyncClient
 import asyncio
 
-def main():
+async def main():
     api_key = <An API key is accessible in the admin page in your dashboard>
     secret = <secret corresponding to the given api_key>
 
