@@ -804,7 +804,7 @@ class Client:
         app_server_response = app_server_response.get("response_data")
 
         return (
-            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            self._handle_service_error(json.dumps(app_server_response.get("issues")))
             if app_server_response and "issues" in app_server_response
             else get_dict_result(True, app_server_response, None)
         )
@@ -838,7 +838,7 @@ class Client:
             return self._handle_service_error(error_message)
 
         return (
-            self._handle_service_error(json.dumps(app_server_response.get('issues')))
+            self._handle_service_error(json.dumps(app_server_response.get("issues")))
             if app_server_response and "issues" in app_server_response
             else get_dict_result(True, app_server_response, None)
         )
@@ -1017,6 +1017,24 @@ class Client:
                 "target_segments_filter": target_segments_filter,
                 "compared_segments_filter": compared_segments_filter,
             },
+        )
+
+        return (
+            app_server_response
+            if "error_message" in app_server_response
+            else get_dict_result(True, app_server_response["response_data"], None)
+        )
+
+    @Decorators.refresh_token_if_needed
+    def create_openai_context_class(self, context_class, openai_endpoint):
+        """
+        A wrapper function for "Create new openAI context class" REST endpoint. View
+        full documentation here:
+        https://docs.monalabs.io/docs/TBD
+        """
+        app_server_response = self._app_server_request(
+            "create_openai_context_class",
+            data={"context_class": context_class, "openai_endpoint": openai_endpoint},
         )
 
         return (
