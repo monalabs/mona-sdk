@@ -1026,7 +1026,7 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
-    def create_openai_context_class(self, context_class, openai_endpoint):
+    def create_openai_context_class(self, context_class, openai_endpoint=None):
         """
         A wrapper function for "Create new openAI context class" REST endpoint.
         """
