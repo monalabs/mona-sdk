@@ -1028,7 +1028,9 @@ class Client:
     @Decorators.refresh_token_if_needed
     def create_openai_context_class(self, context_class, openai_endpoint=None):
         """
-        A wrapper function for "Create new openAI context class" REST endpoint.
+        A wrapper function for "Create new openAI context class" REST endpoint. View
+        full documentation here:
+        https://docs.monalabs.io/docs/create-new-openai-context-class-via-rest-api
         """
         app_server_response = self._app_server_request(
             "create_openai_context_class",
