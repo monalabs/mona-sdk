@@ -103,6 +103,7 @@ bit different from the responses for the REST API.
 #### [get_suggested_config_from_user_input](https://docs.monalabs.io/docs/retrieve-suggested-config-from-user-input-via-rest-api)
 #### [get_aggregated_data_of_a_specific_segment](https://docs.monalabs.io/docs/retrieve-aggregated-data-of-a-specific-segment-via-rest-api)
 #### [get_aggregated_stats_of_a_specific_segmentation](https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api)
+#### [create_openai_context_class](https://docs.monalabs.io/docs/create-new-openai-context-class-via-rest-api)
 
 
 #### Service response:
