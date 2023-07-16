@@ -257,7 +257,7 @@ Same services as the regular client are provided in a non-blocking version in th
 
 **AsyncClient Constructor parameters:** 
   - event_loop (_UnixSelctorEventLoop): (optional) The event loop that will manage the threads. If not provided, a default is used.
-  - executor (TreadPoolExecutor): (optional) The executor the will manage the thread pool. If not provided, a default is used.
+  - executor (TreadPoolExecutor): (optional) The executor that will manage the thread pool. If not provided, a default is used.
   
   
 When using AsyncClient, while all the regular (synchronous) client functions are still supported, you can simply add "_async" suffix to any function (e.g export_async() instead of export(); export_batch_async() instead of export_batch() etc). The async version of the methods accept the same parameters as the synchronous version, in addition to the following parameters:
