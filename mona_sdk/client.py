@@ -528,7 +528,7 @@ class Client:
         total,
     ):
         """
-        Creates the dict response of the client to an export_batch() call.
+        Creates the dict response of the client to an export_batch() or export() call.
         :param response: The response received from the rest-api.
         :param total: total messages in batch.
         :return: A dict with response details (see export_batch docs for format).
@@ -537,12 +537,23 @@ class Client:
         failed = 0
         failure_reasons = {}
 
-        # Check if some messages didn't passed validation on the rest-api.
+        # Check if some/all messages didn't passed validation on the rest-api.
         if total > 0 and not response.ok:
             try:
                 result_info = response.json()
-                failed = result_info["failed"]
-                failure_reasons = result_info["failure_reasons"]
+                # TODO (michal): Canonize incoming server responses.
+                # Check for topLevelError in the response (returned when the request
+                # fails for bad arguments).
+                top_level_error = result_info.get("topLevelError")
+                if top_level_error:
+                    failure_reasons = top_level_error
+                    failed = total
+
+                # Other bad responses should have the following keys.
+                else:
+                    failed = result_info["failed"]
+                    failure_reasons = result_info["failure_reasons"]
+
             except Exception:
                 failed = total
                 failure_reasons = "Failed to send the batch to Mona's servers"
