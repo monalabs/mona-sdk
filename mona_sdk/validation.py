@@ -30,12 +30,14 @@ def mona_messages_to_dicts_validation(
     try:
         # Get all MonsSingleMessage as dicts.
         dict_events = [message.get_dict() for message in events]
+
     except TypeError:
         return handle_export_error(
             "export_batch must get an iterable of MonaSingleMessage.",
             raise_export_exceptions,
             events if log_failed_messages else None,
         )
+
     except AttributeError:
         return handle_export_error(
             "Messages exported to Mona must be MonaSingleMessage.",
@@ -103,9 +105,9 @@ def handle_export_error(error_message, should_raise_exception, failed_message):
     """
     get_logger().error(error_message)
     if failed_message:
-        get_logger().error(
-            f"Failed to send the following to mona: {failed_message}"
-        )
+        get_logger().error(f"Failed to send the following to mona: {failed_message}")
+
     if should_raise_exception:
         raise MonaExportException(error_message)
+
     return False

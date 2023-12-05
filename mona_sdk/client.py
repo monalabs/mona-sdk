@@ -13,8 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
-import json
 import os
+import json
 import logging
 from json import JSONDecodeError
 from typing import List
@@ -52,61 +52,61 @@ from .authentication import (
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
 # Use client.is_active() in order to check authentication status.
-RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
+MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
 )
 
-RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
+MONA_SDK_RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
 )
 
-RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
+MONA_SDK_RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
-SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
+MONA_SDK_SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
 )
 
-SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
+MONA_SDK_SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
-OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
+MONA_SDK_OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
 
 # TODO(anat): Once no one is using it, remove this env var (leave only
 #  OVERRIDE_REST_API_HOST).
-OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
-OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
+MONA_SDK_OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
+MONA_SDK_OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
 
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
-NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
+MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
     os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
 )
 
 # Time to wait (in seconds) between retries in case the authentication server failed to
 # respond.
-WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
+MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
     os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
 )
 
 # When this variable is True, failed messages (for any reason) will be logged at "Error"
 # level.
-SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
+MONA_SDK_SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
-FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
+MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
     "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
 )
 
 # SDK will randomly sample the sent data using this factor and disregard the sampled-
 # out data, unless the sent data is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
-DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
+MONA_SDK_DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
-SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
+MONA_SDK_SAMPLING_CONFIG = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
@@ -200,21 +200,21 @@ class Client:
         self,
         api_key=None,
         secret=None,
-        raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
-        raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
-        raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
-        num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
-        wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
-        should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
-        should_use_ssl=SHOULD_USE_SSL,
-        should_use_authentication=SHOULD_USE_AUTHENTICATION,
-        override_rest_api_full_url=OVERRIDE_REST_API_URL,
-        override_rest_api_host=OVERRIDE_REST_API_HOST,
-        override_app_server_host=OVERRIDE_APP_SERVER_HOST,
+        raise_authentication_exceptions=MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS,
+        raise_export_exceptions=MONA_SDK_RAISE_EXPORT_EXCEPTIONS,
+        raise_service_exceptions=MONA_SDK_RAISE_SERVICE_EXCEPTIONS,
+        num_of_retries_for_authentication=MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION,
+        wait_time_for_authentication_retries=MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
+        should_log_failed_messages=MONA_SDK_SHOULD_LOG_FAILED_MESSAGES,
+        should_use_ssl=MONA_SDK_SHOULD_USE_SSL,
+        should_use_authentication=MONA_SDK_SHOULD_USE_AUTHENTICATION,
+        override_rest_api_full_url=MONA_SDK_OVERRIDE_REST_API_URL,
+        override_rest_api_host=MONA_SDK_OVERRIDE_REST_API_HOST,
+        override_app_server_host=MONA_SDK_OVERRIDE_APP_SERVER_HOST,
         user_id=None,
-        filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
-        default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
-        context_class_to_sampling_rate=SAMPLING_CONFIGURATION_DICT,
+        filter_none_fields_on_export=MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT,
+        default_sampling_rate=MONA_SDK_DEFAULT_SAMPLING_FACTOR,
+        context_class_to_sampling_rate=MONA_SDK_SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
     ):
         """
@@ -425,9 +425,11 @@ class Client:
         for message_event in events:
             if not validate_mona_single_message(message_event):
                 return handle_export_error(
-                    "Messages to export must be of MonaSingleMessage type.",
-                    self.raise_export_exceptions,
-                    events if self.should_log_failed_messages else None,
+                    error_message=(
+                        "Messages to export must be of MonaSingleMessage type."
+                    ),
+                    should_raise_exception=self.raise_export_exceptions,
+                    failed_message=events if self.should_log_failed_messages else None,
                 )
 
             message_copy = dict(message_event)
@@ -469,6 +471,7 @@ class Client:
                 )
             else:
                 rest_api_response = None
+
         except ConnectionError:
             return handle_export_error(
                 "Cannot connect to rest-api",
@@ -488,6 +491,7 @@ class Client:
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
+
         else:
             if client_response["total"] > 0:
                 self._logger.info(
