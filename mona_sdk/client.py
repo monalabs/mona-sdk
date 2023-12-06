@@ -13,8 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 # ----------------------------------------------------------------------------
-import json
 import os
+import json
 import logging
 from json import JSONDecodeError
 from typing import List
@@ -102,11 +102,13 @@ FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
 # SDK will randomly sample the sent data using this factor and disregard the sampled-
 # out data, unless the sent data is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
-DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
+DEFAULT_SAMPLING_FACTOR = float(
+    os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1)
+)
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
-SAMPLING_CONFIGURATION_DICT = get_dict_value_for_env_var(
+SAMPLING_CONFIG = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
@@ -214,7 +216,7 @@ class Client:
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
-        context_class_to_sampling_rate=SAMPLING_CONFIGURATION_DICT,
+        context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
     ):
         """
@@ -425,9 +427,11 @@ class Client:
         for message_event in events:
             if not validate_mona_single_message(message_event):
                 return handle_export_error(
-                    "Messages to export must be of MonaSingleMessage type.",
-                    self.raise_export_exceptions,
-                    events if self.should_log_failed_messages else None,
+                    error_message=(
+                        "Messages to export must be of MonaSingleMessage type."
+                    ),
+                    should_raise_exception=self.raise_export_exceptions,
+                    failed_message=events if self.should_log_failed_messages else None,
                 )
 
             message_copy = dict(message_event)
@@ -469,6 +473,7 @@ class Client:
                 )
             else:
                 rest_api_response = None
+
         except ConnectionError:
             return handle_export_error(
                 "Cannot connect to rest-api",
@@ -488,6 +493,7 @@ class Client:
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
+
         else:
             if client_response["total"] > 0:
                 self._logger.info(
