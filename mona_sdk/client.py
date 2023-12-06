@@ -52,63 +52,63 @@ from .authentication import (
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
 # Use client.is_active() in order to check authentication status.
-MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
+RAISE_AUTHENTICATION_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS", False
 )
 
-MONA_SDK_RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
+RAISE_EXPORT_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_EXPORT_EXCEPTIONS", False
 )
 
-MONA_SDK_RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
+RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
-MONA_SDK_SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
+SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
 )
 
-MONA_SDK_SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
+SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
-MONA_SDK_OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
+OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
 
 # TODO(anat): Once no one is using it, remove this env var (leave only
 #  OVERRIDE_REST_API_HOST).
-MONA_SDK_OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
-MONA_SDK_OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
+OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
+OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
 
 # Number of retries to authenticate in case the authentication server failed to
 # respond.
-MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
+NUM_OF_RETRIES_FOR_AUTHENTICATION = int(
     os.environ.get("MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION", 3)
 )
 
 # Time to wait (in seconds) between retries in case the authentication server failed to
 # respond.
-MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
+WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC = int(
     os.environ.get("MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC", 2)
 )
 
 # When this variable is True, failed messages (for any reason) will be logged at "Error"
 # level.
-MONA_SDK_SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
+SHOULD_LOG_FAILED_MESSAGES = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_LOG_FAILED_MESSAGES", False
 )
 
-MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
+FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
     "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
 )
 
 # SDK will randomly sample the sent data using this factor and disregard the sampled-
 # out data, unless the sent data is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
-MONA_SDK_DEFAULT_SAMPLING_FACTOR = float(
+DEFAULT_SAMPLING_FACTOR = float(
     os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1)
 )
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
-MONA_SDK_SAMPLING_CONFIG = get_dict_value_for_env_var(
+SAMPLING_CONFIG = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
 )
 
@@ -202,21 +202,21 @@ class Client:
         self,
         api_key=None,
         secret=None,
-        raise_authentication_exceptions=MONA_SDK_RAISE_AUTHENTICATION_EXCEPTIONS,
-        raise_export_exceptions=MONA_SDK_RAISE_EXPORT_EXCEPTIONS,
-        raise_service_exceptions=MONA_SDK_RAISE_SERVICE_EXCEPTIONS,
-        num_of_retries_for_authentication=MONA_SDK_NUM_OF_RETRIES_FOR_AUTHENTICATION,
-        wait_time_for_authentication_retries=MONA_SDK_WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
-        should_log_failed_messages=MONA_SDK_SHOULD_LOG_FAILED_MESSAGES,
-        should_use_ssl=MONA_SDK_SHOULD_USE_SSL,
-        should_use_authentication=MONA_SDK_SHOULD_USE_AUTHENTICATION,
-        override_rest_api_full_url=MONA_SDK_OVERRIDE_REST_API_URL,
-        override_rest_api_host=MONA_SDK_OVERRIDE_REST_API_HOST,
-        override_app_server_host=MONA_SDK_OVERRIDE_APP_SERVER_HOST,
+        raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
+        raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
+        raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
+        num_of_retries_for_authentication=NUM_OF_RETRIES_FOR_AUTHENTICATION,
+        wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
+        should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
+        should_use_ssl=SHOULD_USE_SSL,
+        should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        override_rest_api_full_url=OVERRIDE_REST_API_URL,
+        override_rest_api_host=OVERRIDE_REST_API_HOST,
+        override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         user_id=None,
-        filter_none_fields_on_export=MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT,
-        default_sampling_rate=MONA_SDK_DEFAULT_SAMPLING_FACTOR,
-        context_class_to_sampling_rate=MONA_SDK_SAMPLING_CONFIG,
+        filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
+        default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
+        context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
     ):
         """
