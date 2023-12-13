@@ -141,6 +141,9 @@ UNPROVIDED_VALUE = "mona_unprovided_value"
 CONTEXT_CLASS_FIELD_NAME = "arcClass"
 CONTEXT_ID_FIELD_NAME = "contextId"
 
+CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
+SERVER_ERROR_RESPONSE_STATUS_CODE = 500
+
 
 @dataclass
 class MonaSingleMessage:
@@ -1054,6 +1057,41 @@ class Client:
             else get_dict_result(True, app_server_response["response_data"], None)
         )
 
+    @Decorators.refresh_token_if_needed
+    def initiate_csv_upload_request(
+        self,
+        file_path,
+        context_class,
+        context_id_field=None,
+        export_timestamp_field=None,
+    ):
+        """
+        A wrapper function for initiate_csv_upload_request REST endpoint.
+        """
+
+        def custom_bad_response_handler(json_response, status_code):
+            error_message = None
+            if status_code == CLIENT_ERROR_RESPONSE_STATUS_CODE:
+                issues = json_response.get("issues", "")
+                error = json_response.get("error_message")
+                error_message = f"{error + ': ' if (error and issues) else ''}{issues}"
+
+            if status_code == SERVER_ERROR_RESPONSE_STATUS_CODE:
+                error_message = json_response.get("error_message")
+
+            return self._handle_service_error(error_message)
+
+        return self._app_server_request(
+            endpoint_name="initiate_csv_upload_request",
+            custom_bad_response_handler=custom_bad_response_handler,
+            data={
+                "file_path": file_path,
+                "context_class": context_class,
+                "context_id_field": context_id_field,
+                "export_timestamp_field": export_timestamp_field,
+            },
+        )
+
     def _handle_service_error(self, error_message):
         """
         Logs an error and raises MonaServiceException if RAISE_SERVICE_EXCEPTIONS is
@@ -1078,7 +1116,19 @@ class Client:
             else UNAUTHENTICATED_CHECK_ERROR_MESSAGE
         )
 
-    def _app_server_request(self, endpoint_name, data=None):
+    def _default_bad_response_handler(self, json_response, status_code):
+        if (
+            json_response
+            and "response_data" in json_response
+            and status_code == CLIENT_ERROR_RESPONSE_STATUS_CODE
+        ):
+            return self._handle_service_error(json_response["response_data"])
+
+        return self._handle_service_error(SERVICE_ERROR_MESSAGE)
+
+    def _app_server_request(
+        self, endpoint_name, data=None, custom_bad_response_handler=None
+    ):
         """
         Send a request to Mona's app-server given endpoint with the given data (should
         be a dict with the endpoint requested fields).
@@ -1089,9 +1139,9 @@ class Client:
                 headers=get_basic_auth_header(
                     self.api_key, self.should_use_authentication
                 ),
-                # Remove keys with UNPROVIDED_FIELD values to avoid overriding the
-                # default value on the endpoint itself.
-                json=remove_items_by_value(data, UNPROVIDED_VALUE) if data else {},
+                # Remove keys with UNPROVIDED_FIELD values to avoid overriding
+                # the default value on the endpoint itself.
+                json=(remove_items_by_value(data, UNPROVIDED_VALUE) if data else {}),
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
@@ -1104,6 +1154,15 @@ class Client:
                     )
                     else self._handle_service_error(SERVICE_ERROR_MESSAGE)
                 )
+                kwargs = {
+                    "json_response": json_response,
+                    "status_code": app_server_response.status_code,
+                }
+                bad_response_handler = (
+                    custom_bad_response_handler or self._default_bad_response_handler
+                )
+
+                return bad_response_handler(**kwargs)
 
             return json_response
 
