@@ -1145,15 +1145,6 @@ class Client:
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
-                return (
-                    self._handle_service_error(json_response["response_data"])
-                    if (
-                        app_server_response.status_code == 400
-                        and json_response
-                        and "response_data" in json_response
-                    )
-                    else self._handle_service_error(SERVICE_ERROR_MESSAGE)
-                )
                 kwargs = {
                     "json_response": json_response,
                     "status_code": app_server_response.status_code,
