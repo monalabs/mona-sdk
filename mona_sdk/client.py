@@ -1066,18 +1066,24 @@ class Client:
         export_timestamp_field=None,
     ):
         """
-        A wrapper function for initiate_csv_upload_request REST endpoint.
+        A wrapper function for initiate_csv_upload_request REST endpoint. Available
+        only in specific Mona environments.
         """
 
-        def custom_bad_response_handler(json_response, status_code):
-            error_message = None
-            if status_code == CLIENT_ERROR_RESPONSE_STATUS_CODE:
-                issues = json_response.get("issues", "")
-                error = json_response.get("error_message")
-                error_message = f"{error + ': ' if (error and issues) else ''}{issues}"
+        def _get_client_error_message(json_response):
+            issues = json_response.get("issues", "")
+            error = json_response.get("error_message")
+            return f"{error + ': ' if (error and issues) else ''}{issues}"
 
-            if status_code == SERVER_ERROR_RESPONSE_STATUS_CODE:
+        def custom_bad_response_handler(json_response, status_code):
+            if status_code == CLIENT_ERROR_RESPONSE_STATUS_CODE:
+                error_message = _get_client_error_message(json_response)
+
+            elif status_code == SERVER_ERROR_RESPONSE_STATUS_CODE:
                 error_message = json_response.get("error_message")
+
+            else:
+                error_message = SERVICE_ERROR_MESSAGE
 
             return self._handle_service_error(error_message)
 
@@ -1145,15 +1151,14 @@ class Client:
             )
             json_response = app_server_response.json()
             if not app_server_response.ok:
-                kwargs = {
-                    "json_response": json_response,
-                    "status_code": app_server_response.status_code,
-                }
                 bad_response_handler = (
                     custom_bad_response_handler or self._default_bad_response_handler
                 )
 
-                return bad_response_handler(**kwargs)
+                return bad_response_handler(
+                    json_response=json_response,
+                    status_code=app_server_response.status_code,
+                )
 
             return json_response
 
