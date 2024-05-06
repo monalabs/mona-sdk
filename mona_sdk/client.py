@@ -547,7 +547,7 @@ class Client:
         if total > 0 and not response.ok:
             try:
                 result_info = response.json()
-                # TODO (michal): Canonize incoming server responses.
+                # TODO(michal): Canonize incoming server responses.
                 # Check for topLevelError in the response (returned when the request
                 # fails for bad arguments).
                 top_level_error = result_info.get("topLevelError")
@@ -703,7 +703,6 @@ class Client:
             else self._handle_service_error(RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE)
         )
 
-    # todo so this is the important part of here.
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     def _update_sampling_factors_if_needed(self):
         """
