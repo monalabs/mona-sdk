@@ -703,6 +703,7 @@ class Client:
             else self._handle_service_error(RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE)
         )
 
+    # todo so this is the important part of here.
     @cached(cache=TTLCache(maxsize=100, ttl=SAMPLING_FACTORS_MAX_AGE_SECONDS))
     def _update_sampling_factors_if_needed(self):
         """
@@ -988,7 +989,7 @@ class Client:
             if "error_message" in app_server_response
             else get_dict_result(
                 True,
-                {"aggregated_data": app_server_response["response_data"].get("{}")},
+                {"aggregated_data": app_server_response["response_data"]},
                 None,
             )
         )
