@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="mona_sdk",
-    version="0.0.51",
+    version="0.0.52",
     author="MonaLabs",
     author_email="sdk@monalabs.io",
     description="SDK for communicating with Mona's servers",
