@@ -550,7 +550,7 @@ class Client:
         if total > 0 and not response.ok:
             try:
                 result_info = response.json()
-                # TODO (michal): Canonize incoming server responses.
+                # TODO(michal): Canonize incoming server responses.
                 # Check for topLevelError in the response (returned when the request
                 # fails for bad arguments).
                 top_level_error = result_info.get("topLevelError")
@@ -991,7 +991,7 @@ class Client:
             if "error_message" in app_server_response
             else get_dict_result(
                 True,
-                {"aggregated_data": app_server_response["response_data"].get("{}")},
+                {"aggregated_data": app_server_response["response_data"]},
                 None,
             )
         )
