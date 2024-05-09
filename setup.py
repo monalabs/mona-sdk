@@ -18,7 +18,7 @@ setuptools.setup(
         "python-jose>=3.2.0",
         "requests-mock>=1.8.0",
         "dataclasses==0.8; python_version<'3.7'",
-        "cachetools==5.2.0",
+        "cachetools",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
