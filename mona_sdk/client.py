@@ -25,7 +25,6 @@ import requests
 from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
-
 from .logger import get_logger
 from .validation import (
     handle_export_error,
@@ -102,9 +101,7 @@ FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
 # SDK will randomly sample the sent data using this factor and disregard the sampled-
 # out data, unless the sent data is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
-DEFAULT_SAMPLING_FACTOR = float(
-    os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1)
-)
+DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
@@ -326,7 +323,9 @@ class Client:
         :return: The customer's user id (tenant id).
         """
         decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key), verify=False
+            get_current_token_by_api_key(self.api_key),
+            verify=False,
+            options={"verify_signature": False},
         )
         return decoded_token["tenantId"]
 
