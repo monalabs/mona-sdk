@@ -102,9 +102,7 @@ FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
 # SDK will randomly sample the sent data using this factor and disregard the sampled-
 # out data, unless the sent data is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
-DEFAULT_SAMPLING_FACTOR = float(
-    os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1)
-)
+DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
 
 # When set, SDK will randomly sample the sent data for any class keyed in the config.
 # See readme for more details.
@@ -114,8 +112,8 @@ SAMPLING_CONFIG = get_dict_value_for_env_var(
 
 SAMPLING_CONFIG_NAME = os.environ.get("SAMPLING_CONFIG_NAME")
 
-SAMPLING_FACTORS_MAX_AGE_SECONDS = os.environ.get(
-    "SAMPLING_FACTORS_MAX_AGE_SECONDS", 300
+SAMPLING_FACTORS_MAX_AGE_SECONDS = float(
+    os.environ.get("SAMPLING_FACTORS_MAX_AGE_SECONDS", 300)
 )
 
 UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
@@ -326,7 +324,9 @@ class Client:
         :return: The customer's user id (tenant id).
         """
         decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key), verify=False
+            get_current_token_by_api_key(self.api_key),
+            verify=False,
+            options={"verify_signature": False},
         )
         return decoded_token["tenantId"]
 
