@@ -965,6 +965,10 @@ class Client:
         requested_segments=UNPROVIDED_VALUE,
         excluded_segments=UNPROVIDED_VALUE,
         baseline_segment=UNPROVIDED_VALUE,
+        timestamp_field_name=UNPROVIDED_VALUE,
+        right_inclusive=UNPROVIDED_VALUE,
+        include_super_segments=UNPROVIDED_VALUE,
+        time_series_offset_seconds=UNPROVIDED_VALUE
     ):
         """
         A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
@@ -984,6 +988,10 @@ class Client:
                 "requested_segments": requested_segments,
                 "excluded_segments": excluded_segments,
                 "baseline_segment": baseline_segment,
+                "timestamp_field_name": timestamp_field_name,
+                "right_inclusive": right_inclusive,
+                "include_super_segments": include_super_segments,
+                "time_series_offset_seconds": time_series_offset_seconds
             },
         )
         return (
@@ -1013,6 +1021,9 @@ class Client:
         excluded_segments=UNPROVIDED_VALUE,
         target_segments_filter=UNPROVIDED_VALUE,
         compared_segments_filter=UNPROVIDED_VALUE,
+        timestamp_field_name=UNPROVIDED_VALUE,
+        metric_1_secondary_field=UNPROVIDED_VALUE,
+        metric_2_secondary_field=UNPROVIDED_VALUE
     ):
         """
         A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
@@ -1036,6 +1047,9 @@ class Client:
                 "excluded_segments": excluded_segments,
                 "target_segments_filter": target_segments_filter,
                 "compared_segments_filter": compared_segments_filter,
+                "timestamp_field_name": timestamp_field_name,
+                "metric_1_secondary_field": metric_1_secondary_field,
+                "metric_2_secondary_field":  metric_2_secondary_field
             },
         )
 
@@ -1172,3 +1186,5 @@ class Client:
             return self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
+
+
