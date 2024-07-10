@@ -1186,5 +1186,3 @@ class Client:
             return self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
-
-
