@@ -1031,7 +1031,7 @@ class Client:
         https://docs.monalabs.io/docs/retrieve-stats-of-specific-segmentation-via-rest-api
         """
         app_server_response = self._app_server_request(
-            "stats",
+            "get_segments_for_dimensions",
             data={
                 "context_class": context_class,
                 "dimension": dimension,
