@@ -4,7 +4,7 @@ import random
 import hashlib
 from json import JSONDecodeError
 
-from mona_sdk.client_exceptions import MonaInitializationException
+from client_exceptions import MonaInitializationException
 
 NORMALIZED_HASH_DECIMAL_DIGITS = 7
 NORMALIZED_HASH_PRECISION = 10**NORMALIZED_HASH_DECIMAL_DIGITS

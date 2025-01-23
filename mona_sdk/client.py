@@ -18,36 +18,43 @@ import json
 import logging
 from json import JSONDecodeError
 from typing import List
-from dataclasses import dataclass
 
 import jwt
 import requests
 from cachetools import TTLCache, cached
 from requests.exceptions import ConnectionError
-from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 
-from .logger import get_logger
-from .validation import (
+from auth_master_swithces import FRONTEGG_AUTH_MODE
+from client_exceptions import MonaServiceException, MonaInitializationException
+
+from logger import get_logger
+from messages import UNAUTHENTICATED_CHECK_ERROR_MESSAGE, SERVICE_ERROR_MESSAGE, \
+    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE, APP_SERVER_CONNECTION_ERROR_MESSAGE, \
+    CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE
+from misc_utils import ged_dict_with_filtered_out_none_values
+from mona_single_message import MonaSingleMessage
+from validation import (
     handle_export_error,
     update_mona_fields_names,
     validate_inner_message_type,
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from .client_util import (
+from client_util import (
     get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
     keep_message_after_sampling,
     get_boolean_value_for_env_var,
 )
-from .authentication import (
-    Decorators,
+from auth import (
     is_authenticated,
-    first_authentication,
+    initial_authentication,
     get_basic_auth_header,
     get_current_token_by_api_key,
+    MANUAL_TOKEN_STRING,
 )
+from auth_decorator import Decorators
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -70,10 +77,9 @@ SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
+OVERRIDE_APP_SERVER_URL = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_URL")
 OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
 
-# TODO(anat): Once no one is using it, remove this env var (leave only
-#  OVERRIDE_REST_API_HOST).
 OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
 OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
 
@@ -116,81 +122,18 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = float(
     os.environ.get("SAMPLING_FACTORS_MAX_AGE_SECONDS", 300)
 )
 
-UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
-    "Notice that should_use_authentication is set to False, which is not supported by "
-    "default and must be explicitly requested from Mona team. "
-)
-SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
-
-RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
-GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR_MESSAGE = (
-    "Could not get aggregates state of a specific segmentation"
-)
-
-APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
-
-CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE = "config must be a dict"
-
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
 # None argument if needed.
 UNPROVIDED_VALUE = "mona_unprovided_value"
 
-# TODO(anat): change the following line once REST-api allows "contextClass"
+# TODO(anat): Change the following line once REST-api allows "contextClass"
 #  instead of "arcClass".
 CONTEXT_CLASS_FIELD_NAME = "arcClass"
 CONTEXT_ID_FIELD_NAME = "contextId"
 
 CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
-
-
-@dataclass
-class MonaSingleMessage:
-    """
-    Class for keeping properties for a single Mona Message.
-    Attributes:
-        :param message (dict): (Required) JSON serializable dict with properties to send
-            about the context ID.
-        :param contextClass (str): (Required) context classes are defined in the Mona
-            Config and define the schema of the contexts.
-        :param contextId (str): (Optional) A unique identifier for the current context
-            instance. One can export multiple messages with the same context_id and Mona
-            would aggregate all of these messages to one big message on its backend.
-            If none is given, Mona will create a random uuid for it. This is highly
-            unrecommended - since it takes away the option to update this data in the
-            future.
-        :param exportTimestamp (int|str): (Optional) This is the primary timestamp Mona
-            will use when considering the data being sent. It should be a date (ISO
-            string or a Unix time number) representing the time the message was created.
-            If not supplied, current time is used.
-        :param action (str): (Optional) The action to use on the values in the fields of
-            this message - "OVERWRITE", "ADD" or "NEW" (default: "OVERWRITE").
-
-
-    A new message initialization would look like this:
-    message_to_mona = MonaSingleMessage(
-        message=<the relevant monitoring information>,
-        contextClass="MY_CONTEXT_CLASS_NAME",
-        contextId=<the context instance unique id>,
-        exportTimestamp=<the message export timestamp>,
-        action=<the wanted action>,
-    )
-    """
-
-    message: dict
-    contextClass: str
-    contextId: str = None
-    exportTimestamp: int or str = None
-    action: str = None
-    sampleConfigName: str = None
-
-    def get_dict(self):
-        return {
-            key: value
-            for key, value in self.__dict__.items()
-            if key in MonaSingleMessage.__dataclass_fields__.keys()
-        }
 
 
 class Client:
@@ -214,11 +157,13 @@ class Client:
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
+        override_app_server_full_url=OVERRIDE_APP_SERVER_URL,
         user_id=None,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
+        manual_access_token=None,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -232,6 +177,13 @@ class Client:
                 "provided."
             )
 
+        # todo what about the rest stuff?
+        if (manual_access_token or FRONTEGG_AUTH_MODE) and not user_id:
+            raise MonaInitializationException(
+                f"When Mona Client is initiated with {FRONTEGG_AUTH_MODE=} or with "
+                "manual access token, then user_id must be provided. "
+            )
+
         if sampling_config_name and context_class_to_sampling_rate:
             raise MonaInitializationException(
                 "Only one sampling method can be used at a time. Either remove "
@@ -240,7 +192,7 @@ class Client:
 
         self._logger = get_logger()
 
-        self.api_key = api_key
+        self.api_key = api_key if not manual_access_token else MANUAL_TOKEN_STRING
         self.secret = secret
 
         self.raise_export_exceptions = raise_export_exceptions
@@ -250,13 +202,14 @@ class Client:
         self.should_use_authentication = should_use_authentication
 
         if should_use_authentication:
+            self._manual_access_token = manual_access_token
             self.raise_authentication_exceptions = raise_authentication_exceptions
             self.num_of_retries_for_authentication = num_of_retries_for_authentication
             self.wait_time_for_authentication_retries = (
                 wait_time_for_authentication_retries
             )
 
-            could_authenticate = first_authentication(self)
+            could_authenticate = initial_authentication(self)
             if not could_authenticate:
                 # TODO(anat): consider replacing this return with an if statement for
                 #  the next part.
@@ -266,11 +219,12 @@ class Client:
         # this point the client was successfully authenticated and self._get_user_id()
         # will work.
         self._user_id = user_id or self._get_user_id()
+
         self._rest_api_url = (
             override_rest_api_full_url
             or self._get_rest_api_export_url(override_host=override_rest_api_host)
         )
-        self._app_server_url = self._get_app_server_url(
+        self._app_server_url = override_app_server_full_url or self._get_app_server_url(
             override_host=override_app_server_host
         )
         self.filter_none_fields_on_export = filter_none_fields_on_export
@@ -296,6 +250,12 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
+        # todo maybe think about a different name here
+        # todo how to handle this?
+
+    def get_manual_access_token(self):
+        return self._manual_access_token
+
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"incoming{self._user_id}.monalabs.io"
@@ -303,6 +263,7 @@ class Client:
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self, override_host=None):
+        # todo maybe we should have a general override?
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"api{self._user_id}.monalabs.io"
         return f"{http_protocol}://{host_name}"
@@ -312,6 +273,7 @@ class Client:
         Returns True if the client is authenticated (or able to re-authenticate when
         needed) and therefore can export messages, otherwise returns False, meaning the
         client cannot export data to Mona's servers.
+
         Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
         is set to False.
         """
@@ -330,9 +292,6 @@ class Client:
         )
         return decoded_token["tenantId"]
 
-    @staticmethod
-    def _filter_none_fields(message):
-        return {key: val for key, val in message.items() if val is not None}
 
     def _should_filter_none_fields(self, filter_none_fields):
         """
@@ -342,6 +301,7 @@ class Client:
             True if the None fields should be filtered, if the caller function did
             not provide filter_none_fields use the client's self default.
         """
+
         return (
             self.filter_none_fields_on_export
             if filter_none_fields is None
@@ -460,7 +420,7 @@ class Client:
                 continue
 
             if self._should_filter_none_fields(filter_none_fields):
-                message_copy["message"] = self._filter_none_fields(
+                message_copy["message"] = ged_dict_with_filtered_out_none_values(
                     message_copy["message"]
                 )
             # If the message was left empty after it was filtered, we don't want it to
@@ -949,6 +909,7 @@ class Client:
         try:
             data = app_server_response["response_data"]["suggested_config"]
             return get_dict_result(True, data, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -968,7 +929,7 @@ class Client:
         timestamp_field_name=UNPROVIDED_VALUE,
         right_inclusive=UNPROVIDED_VALUE,
         include_super_segments=UNPROVIDED_VALUE,
-        time_series_offset_seconds=UNPROVIDED_VALUE
+        time_series_offset_seconds=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
@@ -991,7 +952,7 @@ class Client:
                 "timestamp_field_name": timestamp_field_name,
                 "right_inclusive": right_inclusive,
                 "include_super_segments": include_super_segments,
-                "time_series_offset_seconds": time_series_offset_seconds
+                "time_series_offset_seconds": time_series_offset_seconds,
             },
         )
         return (
@@ -1023,7 +984,7 @@ class Client:
         compared_segments_filter=UNPROVIDED_VALUE,
         timestamp_field_name=UNPROVIDED_VALUE,
         metric_1_secondary_field=UNPROVIDED_VALUE,
-        metric_2_secondary_field=UNPROVIDED_VALUE
+        metric_2_secondary_field=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
@@ -1049,7 +1010,7 @@ class Client:
                 "compared_segments_filter": compared_segments_filter,
                 "timestamp_field_name": timestamp_field_name,
                 "metric_1_secondary_field": metric_1_secondary_field,
-                "metric_2_secondary_field":  metric_2_secondary_field
+                "metric_2_secondary_field": metric_2_secondary_field,
             },
         )
 
@@ -1152,6 +1113,7 @@ class Client:
 
         return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
+    # todo in the end the point is to get the token here, so let's focus on this.
     def _app_server_request(
         self, endpoint_name, data=None, custom_bad_response_handler=None
     ):
@@ -1163,13 +1125,17 @@ class Client:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
                 headers=get_basic_auth_header(
-                    self.api_key, self.should_use_authentication
+                    # todo what is the key, i'm not sure
+                    self.api_key,
+                    self.should_use_authentication,
                 ),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.
                 json=(remove_items_by_value(data, UNPROVIDED_VALUE) if data else {}),
             )
+
             json_response = app_server_response.json()
+
             if not app_server_response.ok:
                 bad_response_handler = (
                     custom_bad_response_handler or self._default_bad_response_handler
@@ -1184,5 +1150,6 @@ class Client:
 
         except ConnectionError:
             return self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
