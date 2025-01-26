@@ -57,11 +57,10 @@ OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = os.environ.get("MONA_SDK_OIDC_CLIENT_SECRET")
 OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
 
+CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials"
+
 BASIC_HEADER = {"Content-Type": "application/json"}
 URLENCODED_HEADER = {"Content-Type": "application/x-www-form-urlencoded"}
-
-TOKEN_EXPIRED_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -75,16 +74,22 @@ API_KEYS_TO_TOKEN_DATA = {}
 # todo adjust this
 # Token data args names:
 ERRORS = "errors"
-EXPIRES = "expires_in"
+
+# todo move stuff around here
+EXPIRES_IN_FRONTEGG = "expiresIn"
+EXPIRED_IN_OIDC = "expires_in"
+
+
 ACCESS_TOKEN = "access_token" if OIDC_AUTH_MODE else "accessToken"
 REFRESH_TOKEN = "refreshToken"
+
 TIME_TO_REFRESH = "timeToRefresh"
 
 # todo what is this mess
 IS_AUTHENTICATED = "isAuthenticated"
 
 # todo change the values here
-MANUAL_TOKEN_STRING = "BOOM"
+MANUAL_TOKEN_STRING_FOR_API_KEY = "BOOM"
 
 # TODO(anat): consider initializing a different lock for each api_key.
 authentication_lock = Lock()
@@ -98,7 +103,7 @@ def initial_authentication(mona_client):
         get_logger().info("Manual token provided.")
 
         # todo just make sure that the other stuff are removed from here.
-        API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING] = {
+        API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_KEY] = {
             ACCESS_TOKEN: mona_client.get_manual_access_token(),
             IS_AUTHENTICATED: True,
         }
@@ -119,7 +124,12 @@ def initial_authentication(mona_client):
                 API_KEYS_TO_TOKEN_DATA[mona_client.api_key][
                     IS_AUTHENTICATED
                 ] = response.ok
-                _calculate_and_set_time_to_refresh(mona_client.api_key)
+
+                time_to_refresh = _calculate_time_to_refresh(mona_client.api_key)
+                if time_to_refresh:
+                    API_KEYS_TO_TOKEN_DATA[mona_client.api_key][
+                        TIME_TO_REFRESH
+                    ] = time_to_refresh
 
     if is_authenticated(mona_client.api_key):
         # Success
@@ -144,7 +154,10 @@ def _get_error_string_from_token_info(api_key):
 
 def _request_access_token_with_retries(mona_client):
     return _get_auth_response_with_retries(
-        lambda: _request_access_token_once(mona_client.api_key, mona_client.secret),
+        # todo think how is this done here with this dot notation
+        lambda: _request_access_token_once(
+            mona_client.api_key, mona_client.secret, mona_client.oidc_scope
+        ),
         num_of_retries=mona_client.num_of_retries_for_authentication,
         auth_wait_time_sec=mona_client.wait_time_for_authentication_retries,
     )
@@ -195,7 +208,7 @@ def _get_auth_response_with_retries(
     return response
 
 
-def _request_access_token_once(api_key, secret):
+def _request_access_token_once(api_key, secret, oidc_scope=None):
     """
     Sends an access token REST request and returns the response.
     """
@@ -209,16 +222,20 @@ def _request_access_token_once(api_key, secret):
         )
 
     if OIDC_AUTH_MODE:
+        data_kwargs = {
+            "client_id": api_key,
+            "client_secret": secret,
+            "grant_type": CLIENT_CREDENTIALS_GRANT_TYPE,
+        }
+
+        if oidc_scope:
+            data_kwargs["scope"] = oidc_scope
+
         return requests.request(
             "POST",
             AUTH_API_TOKEN_URL,
             headers=URLENCODED_HEADER,
-            data={
-                "client_id": OIDC_CLIENT_ID,
-                "client_secret": OIDC_CLIENT_SECRET,
-                "grant_type": "client_credentials",
-                "scope": OIDC_SCOPE,
-            },
+            data={**data_kwargs},
         )
 
 
@@ -273,29 +290,24 @@ def is_authenticated(api_key):
     return _get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
 
 
-def _calculate_and_set_time_to_refresh(api_key):
+def _calculate_time_to_refresh(api_key):
     """
     Calculates the time the access token needs to be refreshed and updates the relevant
     api_key token data.
     """
-    # todo depends on how we do that
-    if is_authenticated(api_key):
-        current_time = datetime.datetime.now()
+    if not is_authenticated(api_key):
+        return None
 
-        # token_expires = datetime.datetime.strptime(
-        #     str(_get_token_info_by_api_key(api_key, EXPIRES)), TOKEN_EXPIRED_DATE_FORMAT
-        # )
-
-        # token_expires = datetime.datetime.strptime(
-        #     str(_get_token_info_by_api_key(api_key, EXPIRES)), TOKEN_EXPIRED_DATE_FORMAT
-        # )
-
-        # Set the found value in the clients token info.
-        API_KEYS_TO_TOKEN_DATA[api_key][TIME_TO_REFRESH] = (
-            # token_expires - REFRESH_TOKEN_SAFETY_MARGIN
-            current_time
-            + datetime.timedelta(seconds=_get_token_info_by_api_key(api_key, EXPIRES))
+    token_expires = datetime.datetime.now() + datetime.timedelta(
+        seconds=_get_token_info_by_api_key(
+            api_key,
+            token_data_arg=EXPIRES_IN_FRONTEGG
+            if FRONTEGG_AUTH_MODE
+            else EXPIRED_IN_OIDC,
         )
+    )
+
+    return token_expires - REFRESH_TOKEN_SAFETY_MARGIN
 
 
 def _handle_authentications_error(
@@ -318,6 +330,9 @@ def _should_refresh_token(mona_client):
     :return: True if the token has expired, or is about to expire in
     REFRESH_TOKEN_SAFETY_MARGIN hours or less, False otherwise.
     """
+
+    # We don't know when the manual token is going to expire, therefore we'll let the
+    # user use it until she'll start getting authentication errors from the BE.
     if mona_client.get_manual_access_token():
         get_logger().info("Not refreshing manual token")
         return False
@@ -361,8 +376,13 @@ def _refresh_token(mona_client):
 
     # Update the client's new token info.
     API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = response.json()
+
     API_KEYS_TO_TOKEN_DATA[mona_client.api_key][IS_AUTHENTICATED] = True
-    _calculate_and_set_time_to_refresh(mona_client.api_key)
+
+    time_to_refresh = _calculate_time_to_refresh(mona_client.api_key)
+
+    if time_to_refresh:
+        API_KEYS_TO_TOKEN_DATA[mona_client.api_key][TIME_TO_REFRESH] = time_to_refresh
 
     get_logger().info(
         f"Refreshed access token, the new token info:"
@@ -372,7 +392,7 @@ def _refresh_token(mona_client):
     return response
 
 
-def get_basic_auth_header(api_key, with_auth):
+def get_auth_header(api_key, with_auth):
     return (
         {
             **BASIC_HEADER,

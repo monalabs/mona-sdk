@@ -28,9 +28,13 @@ from auth_master_swithces import FRONTEGG_AUTH_MODE
 from client_exceptions import MonaServiceException, MonaInitializationException
 
 from logger import get_logger
-from messages import UNAUTHENTICATED_CHECK_ERROR_MESSAGE, SERVICE_ERROR_MESSAGE, \
-    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE, APP_SERVER_CONNECTION_ERROR_MESSAGE, \
-    CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE
+from messages import (
+    UNAUTHENTICATED_CHECK_ERROR_MESSAGE,
+    SERVICE_ERROR_MESSAGE,
+    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
+    APP_SERVER_CONNECTION_ERROR_MESSAGE,
+    CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
+)
 from misc_utils import ged_dict_with_filtered_out_none_values
 from mona_single_message import MonaSingleMessage
 from validation import (
@@ -50,9 +54,9 @@ from client_util import (
 from auth import (
     is_authenticated,
     initial_authentication,
-    get_basic_auth_header,
+    get_auth_header,
     get_current_token_by_api_key,
-    MANUAL_TOKEN_STRING,
+    MANUAL_TOKEN_STRING_FOR_API_KEY,
 )
 from auth_decorator import Decorators
 
@@ -164,6 +168,7 @@ class Client:
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
         manual_access_token=None,
+        oidc_scope=None
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -178,7 +183,7 @@ class Client:
             )
 
         # todo what about the rest stuff?
-        if (manual_access_token or FRONTEGG_AUTH_MODE) and not user_id:
+        if (manual_access_token or not FRONTEGG_AUTH_MODE) and not user_id:
             raise MonaInitializationException(
                 f"When Mona Client is initiated with {FRONTEGG_AUTH_MODE=} or with "
                 "manual access token, then user_id must be provided. "
@@ -192,8 +197,11 @@ class Client:
 
         self._logger = get_logger()
 
-        self.api_key = api_key if not manual_access_token else MANUAL_TOKEN_STRING
+        self.api_key = (
+            api_key if not manual_access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
+        )
         self.secret = secret
+        self.oidc_scope = oidc_scope
 
         self.raise_export_exceptions = raise_export_exceptions
         self.raise_service_exceptions = raise_service_exceptions
@@ -257,6 +265,7 @@ class Client:
     def get_manual_access_token(self):
         return self._manual_access_token
 
+
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"incoming{self._user_id}.monalabs.io"
@@ -292,7 +301,6 @@ class Client:
             options={"verify_signature": False},
         )
         return decoded_token["tenantId"]
-
 
     def _should_filter_none_fields(self, filter_none_fields):
         """
@@ -488,7 +496,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
+            headers=get_auth_header(self.api_key, self.should_use_authentication),
             json=body,
         )
 
@@ -1125,7 +1133,7 @@ class Client:
         try:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
-                headers=get_basic_auth_header(
+                headers=get_auth_header(
                     # todo what is the key, i'm not sure
                     self.api_key,
                     self.should_use_authentication,
