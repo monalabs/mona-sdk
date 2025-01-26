@@ -227,6 +227,7 @@ class Client:
         self._app_server_url = override_app_server_full_url or self._get_app_server_url(
             override_host=override_app_server_host
         )
+
         self.filter_none_fields_on_export = filter_none_fields_on_export
 
         # Data sampling.

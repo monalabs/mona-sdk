@@ -100,7 +100,7 @@ def initial_authentication(mona_client):
         # todo just make sure that the other stuff are removed from here.
         API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING] = {
             ACCESS_TOKEN: mona_client.get_manual_access_token(),
-            IS_AUTHENTICATED: True
+            IS_AUTHENTICATED: True,
         }
         return True
 
@@ -109,7 +109,6 @@ def initial_authentication(mona_client):
         # new token. That token will be shared between all instances that share an
         # api_key.
         with authentication_lock:
-
             # The inner check is needed to avoid multiple redundant authentications.
             if not is_authenticated(mona_client.api_key):
                 response = _request_access_token_with_retries(mona_client)
@@ -117,9 +116,10 @@ def initial_authentication(mona_client):
 
                 # response.ok will be True if authentication was successful and
                 # false if not.
-                _set_api_key_authentication_status(mona_client.api_key, response.ok)
+                API_KEYS_TO_TOKEN_DATA[mona_client.api_key][
+                    IS_AUTHENTICATED
+                ] = response.ok
                 _calculate_and_set_time_to_refresh(mona_client.api_key)
-
 
     if is_authenticated(mona_client.api_key):
         # Success
@@ -127,7 +127,6 @@ def initial_authentication(mona_client):
             f"New client token info: {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
         )
         return True
-
 
     else:
         # Failure
@@ -274,14 +273,6 @@ def is_authenticated(api_key):
     return _get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
 
 
-def _set_api_key_authentication_status(api_key, bool_value):
-    """
-    Sets the IS_AUTHENTICATED arg in the token data dict of the given api_key, this
-    setter is only needed to spare redundant calls for authentication.
-    """
-    API_KEYS_TO_TOKEN_DATA[api_key][IS_AUTHENTICATED] = bool_value
-
-
 def _calculate_and_set_time_to_refresh(api_key):
     """
     Calculates the time the access token needs to be refreshed and updates the relevant
@@ -331,9 +322,9 @@ def _should_refresh_token(mona_client):
         get_logger().info("Not refreshing manual token")
         return False
 
-
     return (
-        _get_token_info_by_api_key(mona_client.api_key, TIME_TO_REFRESH) < datetime.datetime.now()
+        _get_token_info_by_api_key(mona_client.api_key, TIME_TO_REFRESH)
+        < datetime.datetime.now()
     )
 
 
@@ -362,20 +353,21 @@ def _refresh_token(mona_client):
     """
 
     response = _get_authentication_response(mona_client)
-    authentications_response_info = response.json()
 
     # The current client token info will not change if the response was bad, so that on
     # the next function call the client will try to refresh the token again.
-    if response.ok:
-        # Update the client's new token info.
-        API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = authentications_response_info
-        _set_api_key_authentication_status(mona_client.api_key, True)
-        _calculate_and_set_time_to_refresh(mona_client.api_key)
+    if not response.ok:
+        return response
 
-        get_logger().info(
-            f"Refreshed access token, the new token info:"
-            f" {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
-        )
+    # Update the client's new token info.
+    API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = response.json()
+    API_KEYS_TO_TOKEN_DATA[mona_client.api_key][IS_AUTHENTICATED] = True
+    _calculate_and_set_time_to_refresh(mona_client.api_key)
+
+    get_logger().info(
+        f"Refreshed access token, the new token info:"
+        f" {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
+    )
 
     return response
 

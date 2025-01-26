@@ -48,6 +48,7 @@ class Decorators(object):
                         refresh_token_response = _refresh_token(mona_client)
 
                         if not refresh_token_response.ok:
+
                             # TODO(anat): Check if the current token is still valid to
                             #   call the function anyway.
                             return _handle_authentications_error(
