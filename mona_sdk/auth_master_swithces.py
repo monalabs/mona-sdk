@@ -1,6 +1,4 @@
-import os
-
-from client_util import get_boolean_value_for_env_var
+from mona_sdk.misc_utils import get_boolean_value_for_env_var
 
 OIDC_AUTH_MODE = get_boolean_value_for_env_var("MONA_SDK_OIDC_AUTH_MODE", False)
 FRONTEGG_AUTH_MODE = get_boolean_value_for_env_var("MONA_SDK_FRONTEGG_AUTH_MODE", True)

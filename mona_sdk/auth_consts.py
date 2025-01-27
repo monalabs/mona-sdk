@@ -1,4 +1,4 @@
-from auth_master_swithces import OIDC_AUTH_MODE
+from mona_sdk.auth_master_swithces import OIDC_AUTH_MODE
 
 ERRORS = "errors"
 

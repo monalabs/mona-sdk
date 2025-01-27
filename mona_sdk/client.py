@@ -21,14 +21,14 @@ from typing import List
 
 import jwt
 import requests
-from auth import (
+from mona_sdk.auth import (
     get_auth_header,
     is_authenticated,
     initial_authentication,
     get_current_token_by_api_key,
 )
-from logger import get_logger
-from messages import (
+from mona_sdk.logger import get_logger
+from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
     APP_SERVER_CONNECTION_ERROR_MESSAGE,
     CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
@@ -36,27 +36,27 @@ from messages import (
     RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
 from cachetools import TTLCache, cached
-from misc_utils import ged_dict_with_filtered_out_none_values
-from validation import (
+from mona_sdk.misc_utils import ged_dict_with_filtered_out_none_values, \
+    get_boolean_value_for_env_var
+from mona_sdk.validation import (
     handle_export_error,
     update_mona_fields_names,
     validate_inner_message_type,
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
-from client_util import (
+from mona_sdk.auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
+from mona_sdk.client_util import (
     get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
     keep_message_after_sampling,
-    get_boolean_value_for_env_var,
 )
-from auth_decorator import Decorators
-from client_exceptions import MonaServiceException, MonaInitializationException
-from mona_single_message import MonaSingleMessage
+from mona_sdk.auth_decorator import Decorators
+from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+from mona_sdk.mona_single_message import MonaSingleMessage
 from requests.exceptions import ConnectionError
-from auth_master_swithces import FRONTEGG_AUTH_MODE
+from mona_sdk.auth_master_swithces import FRONTEGG_AUTH_MODE
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.

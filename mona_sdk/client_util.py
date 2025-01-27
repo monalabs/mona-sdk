@@ -4,16 +4,10 @@ import random
 import hashlib
 from json import JSONDecodeError
 
-from client_exceptions import MonaInitializationException
+from mona_sdk.client_exceptions import MonaInitializationException
 
 NORMALIZED_HASH_DECIMAL_DIGITS = 7
 NORMALIZED_HASH_PRECISION = 10**NORMALIZED_HASH_DECIMAL_DIGITS
-
-
-def get_boolean_value_for_env_var(env_var, default_value):
-    return {"True": True, "true": True, "False": False, "false": False}.get(
-        os.environ.get(env_var), default_value
-    )
 
 
 def get_dict_value_for_env_var(env_var, cast_values=None, default_value=None):

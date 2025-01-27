@@ -1,6 +1,6 @@
 from functools import wraps
 
-from auth import (
+from mona_sdk.auth import (
     _refresh_token,
     is_authenticated,
     authentication_lock,

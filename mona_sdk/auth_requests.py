@@ -1,7 +1,7 @@
 import os
 
 import requests
-from auth_master_swithces import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE
+from mona_sdk.auth_master_swithces import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE
 
 AUTH_API_TOKEN_URL = os.environ.get(
     "MONA_SDK_AUTH_API_TOKEN_URL",

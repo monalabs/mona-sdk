@@ -23,8 +23,8 @@ import time
 import datetime
 from threading import Lock
 
-from logger import get_logger
-from auth_consts import (
+from mona_sdk.logger import get_logger
+from mona_sdk.auth_consts import (
     ERRORS,
     ACCESS_TOKEN,
     REFRESH_TOKEN,
@@ -34,15 +34,15 @@ from auth_consts import (
     EXPIRES_IN_FRONTEGG,
     MANUAL_TOKEN_STRING_FOR_API_KEY,
 )
-from client_util import get_dict_result
-from auth_requests import (
+from mona_sdk.client_util import get_dict_result
+from mona_sdk.auth_requests import (
     BASIC_HEADER,
     _request_access_token_once,
     _request_refresh_token_once,
 )
 from requests.models import Response
-from client_exceptions import MonaAuthenticationException
-from auth_master_swithces import FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
+from mona_sdk.client_exceptions import MonaAuthenticationException
+from mona_sdk.auth_master_swithces import FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
 # time to refresh the token before it expires (i.e. - in case

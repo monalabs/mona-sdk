@@ -19,9 +19,9 @@ This module contains all validation functions for client use.
 import json
 import collections.abc
 
-from logger import get_logger
-from client_util import is_dict_contains_fields
-from client_exceptions import MonaExportException
+from mona_sdk.logger import get_logger
+from mona_sdk.client_util import is_dict_contains_fields
+from mona_sdk.client_exceptions import MonaExportException
 
 
 def mona_messages_to_dicts_validation(
