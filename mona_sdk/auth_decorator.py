@@ -33,7 +33,6 @@ class Decorators(object):
             # an authentication failure.
             message_to_log = args[1] if should_log_args else None
 
-            # todo where is the key coming from?
             if not is_authenticated(mona_client.api_key):
                 return _handle_authentications_error(
                     "Mona's client is not authenticated",
@@ -58,7 +57,6 @@ class Decorators(object):
                                 message_to_log,
                             )
 
-            # todo I'm not sure here where exactly are we going here
             return decorated(*args, **kwargs)
 
         return inner

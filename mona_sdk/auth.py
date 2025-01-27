@@ -23,10 +23,11 @@ import time
 import datetime
 from threading import Lock
 
-import requests
 from requests.models import Response
 
 from auth_master_swithces import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
+from auth_requests import BASIC_HEADER, _request_access_token_once, \
+    _request_refresh_token_once
 from logger import get_logger
 from client_util import get_dict_result
 from client_exceptions import MonaAuthenticationException
@@ -36,31 +37,15 @@ from client_exceptions import MonaAuthenticationException
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
 # the client will automatically refresh the token to a new one).
 REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
-    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 12))
-)
-
-
-AUTH_API_TOKEN_URL = os.environ.get(
-    "MONA_SDK_AUTH_API_TOKEN_URL",
-    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token",
+    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 2))
 )
 
 # todo check about this thing as well
-REFRESH_TOKEN_URL = os.environ.get(
-    "MONA_SDK_REFRESH_TOKEN_URL",
-    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token/"
-    "token/refresh",
-)
 
 
 OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = os.environ.get("MONA_SDK_OIDC_CLIENT_SECRET")
 OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
-
-CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials"
-
-BASIC_HEADER = {"Content-Type": "application/json"}
-URLENCODED_HEADER = {"Content-Type": "application/x-www-form-urlencoded"}
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -154,7 +139,6 @@ def _get_error_string_from_token_info(api_key):
 
 def _request_access_token_with_retries(mona_client):
     return _get_auth_response_with_retries(
-        # todo think how is this done here with this dot notation
         lambda: _request_access_token_once(
             mona_client.api_key, mona_client.secret, mona_client.oidc_scope
         ),
@@ -206,50 +190,6 @@ def _get_auth_response_with_retries(
                 time.sleep(auth_wait_time_sec)
 
     return response
-
-
-def _request_access_token_once(api_key, secret, oidc_scope=None):
-    """
-    Sends an access token REST request and returns the response.
-    """
-
-    if FRONTEGG_AUTH_MODE:
-        return requests.request(
-            "POST",
-            AUTH_API_TOKEN_URL,
-            headers=BASIC_HEADER,
-            json={"clientId": api_key, "secret": secret},
-        )
-
-    if OIDC_AUTH_MODE:
-        data_kwargs = {
-            "client_id": api_key,
-            "client_secret": secret,
-            "grant_type": CLIENT_CREDENTIALS_GRANT_TYPE,
-        }
-
-        if oidc_scope:
-            data_kwargs["scope"] = oidc_scope
-
-        return requests.request(
-            "POST",
-            AUTH_API_TOKEN_URL,
-            headers=URLENCODED_HEADER,
-            data={**data_kwargs},
-        )
-
-
-# todo any other requests except this one? doesn't look like this.
-def _request_refresh_token_once(refresh_token_key):
-    """
-    Sends a refresh token REST request and returns the response.
-    """
-    return requests.request(
-        "POST",
-        REFRESH_TOKEN_URL,
-        headers=BASIC_HEADER,
-        json={"refreshToken": refresh_token_key},
-    )
 
 
 def _create_a_bad_response(content):
@@ -343,7 +283,9 @@ def _should_refresh_token(mona_client):
     )
 
 
-def _get_authentication_response(mona_client):
+def _get_refresh_token_with_fallback(mona_client):
+
+    # TODO(elie): Support refresh tokens for OIDC.
     if not USE_REFRESH_TOKENS:
         return _request_access_token_with_retries(mona_client)
 
@@ -367,7 +309,7 @@ def _refresh_token(mona_client):
     Gets a new token and sets the needed fields.
     """
 
-    response = _get_authentication_response(mona_client)
+    response = _get_refresh_token_with_fallback(mona_client)
 
     # The current client token info will not change if the response was bad, so that on
     # the next function call the client will try to refresh the token again.

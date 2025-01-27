@@ -182,7 +182,6 @@ class Client:
                 "provided."
             )
 
-        # todo what about the rest stuff?
         if (manual_access_token or not FRONTEGG_AUTH_MODE) and not user_id:
             raise MonaInitializationException(
                 f"When Mona Client is initiated with {FRONTEGG_AUTH_MODE=} or with "
@@ -259,8 +258,6 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
-        # todo maybe think about a different name here
-        # todo how to handle this?
 
     def get_manual_access_token(self):
         return self._manual_access_token
@@ -273,7 +270,6 @@ class Client:
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self, override_host=None):
-        # todo maybe we should have a general override?
         http_protocol = "https" if self.should_use_ssl else "http"
         host_name = override_host or f"api{self._user_id}.monalabs.io"
         return f"{http_protocol}://{host_name}"
@@ -1122,7 +1118,6 @@ class Client:
 
         return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
-    # todo in the end the point is to get the token here, so let's focus on this.
     def _app_server_request(
         self, endpoint_name, data=None, custom_bad_response_handler=None
     ):
@@ -1134,7 +1129,6 @@ class Client:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
                 headers=get_auth_header(
-                    # todo what is the key, i'm not sure
                     self.api_key,
                     self.should_use_authentication,
                 ),
