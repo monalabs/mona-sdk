@@ -56,8 +56,8 @@ from auth import (
     initial_authentication,
     get_auth_header,
     get_current_token_by_api_key,
-    MANUAL_TOKEN_STRING_FOR_API_KEY,
 )
+from auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
 from auth_decorator import Decorators
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not

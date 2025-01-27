@@ -25,7 +25,9 @@ from threading import Lock
 
 from requests.models import Response
 
-from auth_master_swithces import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
+from auth_consts import ERRORS, EXPIRES_IN_FRONTEGG, EXPIRED_IN_OIDC, REFRESH_TOKEN, \
+    TIME_TO_REFRESH, IS_AUTHENTICATED, MANUAL_TOKEN_STRING_FOR_API_KEY, ACCESS_TOKEN
+from auth_master_swithces import FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
 from auth_requests import BASIC_HEADER, _request_access_token_once, \
     _request_refresh_token_once
 from logger import get_logger
@@ -40,9 +42,6 @@ REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
     hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 2))
 )
 
-# todo check about this thing as well
-
-
 OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = os.environ.get("MONA_SDK_OIDC_CLIENT_SECRET")
 OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
@@ -53,41 +52,14 @@ OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
 # the errors that occurred while trying to authenticate).
 API_KEYS_TO_TOKEN_DATA = {}
 
-# todo this one talks about something else, so I don't want to use the same.
-# EXPIRES = "expires"
-
-# todo adjust this
-# Token data args names:
-ERRORS = "errors"
-
-# todo move stuff around here
-EXPIRES_IN_FRONTEGG = "expiresIn"
-EXPIRED_IN_OIDC = "expires_in"
-
-
-ACCESS_TOKEN = "access_token" if OIDC_AUTH_MODE else "accessToken"
-REFRESH_TOKEN = "refreshToken"
-
-TIME_TO_REFRESH = "timeToRefresh"
-
-# todo what is this mess
-IS_AUTHENTICATED = "isAuthenticated"
-
-# todo change the values here
-MANUAL_TOKEN_STRING_FOR_API_KEY = "BOOM"
-
-# TODO(anat): consider initializing a different lock for each api_key.
+# TODO(anat): Consider initializing a different lock for each api_key.
 authentication_lock = Lock()
 
 
-# todo I think that it's time to check stuff here.
 def initial_authentication(mona_client):
     if mona_client.get_manual_access_token():
-        # todo what about the other stuff here that we do when there is a token?
-        #   we need to do that as well now
         get_logger().info("Manual token provided.")
 
-        # todo just make sure that the other stuff are removed from here.
         API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_KEY] = {
             ACCESS_TOKEN: mona_client.get_manual_access_token(),
             IS_AUTHENTICATED: True,
@@ -162,7 +134,7 @@ def _get_auth_response_with_retries(
 ):
     """
     Sends an authentication request (first time/refresh) with a retry mechanism.
-    :param response_generator (lambda)
+    :param: response_generator (lambda)
             A function call that sends the wanted REST request.
     :return: The response received from the authentication server.
     """
@@ -185,7 +157,7 @@ def _get_auth_response_with_retries(
                     ' "Number of retries: ' + str(i) + '"]}'
                 )
             else:
-                # TODO(anat): support exponential growth in wait times between retries.
+                # TODO(anat): Support exponential growth in wait times between retries.
                 # Has more retries, sleep before trying again.
                 time.sleep(auth_wait_time_sec)
 
