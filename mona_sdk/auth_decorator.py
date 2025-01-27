@@ -1,11 +1,11 @@
 from functools import wraps
 
 from auth import (
-    is_authenticated,
-    _handle_authentications_error,
-    _should_refresh_token,
-    authentication_lock,
     _refresh_token,
+    is_authenticated,
+    authentication_lock,
+    _should_refresh_token,
+    _handle_authentications_error,
 )
 
 

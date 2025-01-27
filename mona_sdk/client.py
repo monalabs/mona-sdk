@@ -21,22 +21,22 @@ from typing import List
 
 import jwt
 import requests
-from cachetools import TTLCache, cached
-from requests.exceptions import ConnectionError
-
-from auth_master_swithces import FRONTEGG_AUTH_MODE
-from client_exceptions import MonaServiceException, MonaInitializationException
-
+from auth import (
+    get_auth_header,
+    is_authenticated,
+    initial_authentication,
+    get_current_token_by_api_key,
+)
 from logger import get_logger
 from messages import (
-    UNAUTHENTICATED_CHECK_ERROR_MESSAGE,
     SERVICE_ERROR_MESSAGE,
-    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
     APP_SERVER_CONNECTION_ERROR_MESSAGE,
     CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
+    UNAUTHENTICATED_CHECK_ERROR_MESSAGE,
+    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
+from cachetools import TTLCache, cached
 from misc_utils import ged_dict_with_filtered_out_none_values
-from mona_single_message import MonaSingleMessage
 from validation import (
     handle_export_error,
     update_mona_fields_names,
@@ -44,6 +44,7 @@ from validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
+from auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
 from client_util import (
     get_dict_result,
     remove_items_by_value,
@@ -51,14 +52,11 @@ from client_util import (
     keep_message_after_sampling,
     get_boolean_value_for_env_var,
 )
-from auth import (
-    is_authenticated,
-    initial_authentication,
-    get_auth_header,
-    get_current_token_by_api_key,
-)
-from auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
 from auth_decorator import Decorators
+from client_exceptions import MonaServiceException, MonaInitializationException
+from mona_single_message import MonaSingleMessage
+from requests.exceptions import ConnectionError
+from auth_master_swithces import FRONTEGG_AUTH_MODE
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -168,7 +166,7 @@ class Client:
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
         manual_access_token=None,
-        oidc_scope=None
+        oidc_scope=None,
     ):
         """
         Creates the Client object. this client is lightweight so it can be regenerated
@@ -258,10 +256,8 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
-
     def get_manual_access_token(self):
         return self._manual_access_token
-
 
     def _get_rest_api_export_url(self, override_host=None):
         http_protocol = "https" if self.should_use_ssl else "http"
