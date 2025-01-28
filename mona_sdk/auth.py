@@ -24,22 +24,24 @@ import datetime
 from threading import Lock
 
 from mona_sdk.logger import get_logger
+from requests.models import Response
+from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth_globals import (
     ERRORS,
+    EXPIRES_KEY,
     ACCESS_TOKEN,
     REFRESH_TOKEN,
     TIME_TO_REFRESH,
     IS_AUTHENTICATED,
-    MANUAL_TOKEN_STRING_FOR_API_KEY, USE_REFRESH_TOKENS, EXPIRES_KEY,
-    NO_AUTH_MODE_IS_ON,
+    SHOULD_USE_NO_AUTH_MODE,
+    SHOULD_USE_REFRESH_TOKENS,
+    MANUAL_TOKEN_STRING_FOR_API_KEY, SHOULD_USE_MANUAL_AUTH_MODE,
 )
-from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth_requests import (
     BASIC_HEADER,
     request_access_token_once,
     request_refresh_token_once,
 )
-from requests.models import Response
 from mona_sdk.client_exceptions import MonaAuthenticationException
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
@@ -65,8 +67,8 @@ authentication_lock = Lock()
 
 
 def initial_authentication(mona_client):
-    if NO_AUTH_MODE_IS_ON:
-        get_logger().info("Manual token provided.")
+    if SHOULD_USE_MANUAL_AUTH_MODE:
+        get_logger().info("Manual token mode is on.")
 
         API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_KEY] = {
             ACCESS_TOKEN: mona_client.get_manual_access_token(),
@@ -249,10 +251,8 @@ def should_refresh_token(mona_client):
     REFRESH_TOKEN_SAFETY_MARGIN hours or less, False otherwise.
     """
 
-    # We don't know when the manual token is going to expire, therefore we'll let the
-    # user use it until she'll start getting authentication errors from the BE.
-    if mona_client.get_manual_access_token():
-        get_logger().info("Not refreshing manual token")
+    if SHOULD_USE_REFRESH_TOKENS:
+        get_logger().info("Not refreshing token")
         return False
 
     return (
@@ -264,7 +264,7 @@ def should_refresh_token(mona_client):
 def _get_refresh_token_with_fallback(mona_client):
 
     # TODO(elie): Support refresh tokens for OIDC.
-    if not USE_REFRESH_TOKENS:
+    if not SHOULD_USE_REFRESH_TOKENS:
         return _request_access_token_with_retries(mona_client)
 
     refresh_token_key = _get_token_info_by_api_key(mona_client.api_key, REFRESH_TOKEN)
@@ -312,12 +312,13 @@ def refresh_token(mona_client):
     return response
 
 
-def get_auth_header(api_key, with_auth):
+def get_auth_header(api_key):
+
     return (
-        {
+        BASIC_HEADER
+        if SHOULD_USE_NO_AUTH_MODE
+        else {
             **BASIC_HEADER,
             "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
         }
-        if with_auth
-        else BASIC_HEADER
     )

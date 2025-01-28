@@ -171,6 +171,8 @@ Mona uses several environment variables you can set as you prefer:
 - MONA_SDK_SHOULD_LOG_FAILED_MESSAGES - When true, failed messages will be logged ("ERROR" level).
 - MONA_SDK_OVERRIDE_APP_SERVER_HOST - When provided, all configuration related calls to mona's servers will use this 
   host name instead of the default one ("api<user_id>.monalabs.io").
+- MONA_SDK_OVERRIDE_APP_SERVER_URL - When provided, all messages to Mona's servers will use this full url address 
+  (including "http" prefix and endpoints suffix) instead of the default one.
 - MONA_SDK_OVERRIDE_REST_API_HOST- When provided, all messages (data export) to mona's rest-api will use this host 
   address instead of the default one ("incoming<user_id>.monalabs.io").
 - MONA_SDK_OVERRIDE_REST_API_URL- When provided, all messages to mona's rest-api will use this full url address 

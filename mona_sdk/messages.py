@@ -1,5 +1,5 @@
 UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
-    "Notice that should_use_authentication is set to False, which is not supported by "
+    "Notice that AUTH_MODE is set to NO_AUTH, which is not supported by "
     "default and must be explicitly requested from Mona team."
 )
 

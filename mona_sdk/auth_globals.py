@@ -1,6 +1,6 @@
 from os import environ
 
-from mona_sdk.misc_utils import get_boolean_value_for_env_var
+from mona_sdk.client_util import get_boolean_value_for_env_var
 
 ERRORS = "errors"
 
@@ -20,19 +20,34 @@ MANUAL_TOKEN_STRING_FOR_API_KEY = "manual_token_mode"
 # todo we'll need to remove usages of the old way of doing this.
 OIDC_AUTH_MODE = "OIDC"
 FRONTEGG_AUTH_MODE = "FRONTEGG"
+MANUAL_TOKEN_AUTH_MODE = "MANUAL_TOKEN"
 NO_AUTH_MODE = "NO_AUTH"
 
+SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE_ENV = get_boolean_value_for_env_var(
+    "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
+)
 
-AUTH_MODE = environ.get("AUTH_MODE", FRONTEGG_AUTH_MODE)
+DEFAULT_AUTH_MODE = (
+    NO_AUTH_MODE
+    if not SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE_ENV
+    else FRONTEGG_AUTH_MODE
+)
 
-NO_AUTH_MODE_IS_ON = AUTH_MODE == NO_AUTH_MODE
+AUTH_MODE = environ.get(
+    "AUTH_MODE",
+    DEFAULT_AUTH_MODE,
+)
+
+SHOULD_USE_NO_AUTH_MODE = AUTH_MODE == NO_AUTH_MODE
+
+SHOULD_USE_MANUAL_AUTH_MODE = AUTH_MODE == MANUAL_TOKEN_AUTH_MODE
 
 AUTH_MODE_TO_USE_REFRESH_TOKENS_DEFAULT = {
     FRONTEGG_AUTH_MODE: True,
     OIDC_AUTH_MODE: False,
 }
 USE_REFRESH_TOKENS_DEFAULT = AUTH_MODE_TO_USE_REFRESH_TOKENS_DEFAULT[AUTH_MODE]
-USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
+SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
     "MONA_SDK_USE_REFRESH_TOKENS", USE_REFRESH_TOKENS_DEFAULT
 )
 

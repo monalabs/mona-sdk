@@ -21,6 +21,7 @@ from typing import List
 
 import jwt
 import requests
+from cachetools import TTLCache, cached
 from mona_sdk.auth import (
     get_auth_header,
     is_authenticated,
@@ -35,11 +36,6 @@ from mona_sdk.messages import (
     UNAUTHENTICATED_CHECK_ERROR_MESSAGE,
     RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
-from cachetools import TTLCache, cached
-from mona_sdk.misc_utils import (
-    ged_dict_with_filtered_out_none_values,
-    get_boolean_value_for_env_var,
-)
 from mona_sdk.validation import (
     handle_export_error,
     update_mona_fields_names,
@@ -47,17 +43,20 @@ from mona_sdk.validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from mona_sdk.auth_globals import MANUAL_TOKEN_STRING_FOR_API_KEY, FRONTEGG_AUTH_MODE
+from requests.exceptions import ConnectionError
 from mona_sdk.client_util import (
     get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
-    keep_message_after_sampling,
+    keep_message_after_sampling, ged_dict_with_filtered_out_none_values,
+    get_boolean_value_for_env_var,
 )
+from mona_sdk.auth_globals import FRONTEGG_AUTH_MODE, MANUAL_TOKEN_STRING_FOR_API_KEY, \
+    SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE_ENV, SHOULD_USE_NO_AUTH_MODE, \
+    SHOULD_USE_MANUAL_AUTH_MODE
 from mona_sdk.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
-from requests.exceptions import ConnectionError
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -74,9 +73,6 @@ RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
-SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
-    "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
-)
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
@@ -156,7 +152,8 @@ class Client:
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
-        should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        # T
+        should_use_authentication=None,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
@@ -175,7 +172,13 @@ class Client:
         :param api_key: An api key provided to you by Mona.
         :param secret: The secret corresponding to the given api_key.
         """
-        if not should_use_authentication and not user_id:
+        if SHOULD_USE_MANUAL_AUTH_MODE and not manual_access_token:
+            raise MonaInitializationException(
+                "When MONA_SDK_AUTH_MODE is set to MANUAL_TOKEN, manual_access_token "
+                "must be provided."
+            )
+
+        if SHOULD_USE_NO_AUTH_MODE and not user_id:
             raise MonaInitializationException(
                 "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must be "
                 "provided."
@@ -211,9 +214,8 @@ class Client:
         self.raise_service_exceptions = raise_service_exceptions
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
-        self.should_use_authentication = should_use_authentication
 
-        if should_use_authentication:
+        if not SHOULD_USE_NO_AUTH_MODE:
             self._manual_access_token = manual_access_token
             self.raise_authentication_exceptions = raise_authentication_exceptions
             self.num_of_retries_for_authentication = num_of_retries_for_authentication
@@ -227,7 +229,7 @@ class Client:
                 #  the next part.
                 return
 
-        # If user_id=None then should_use_authentication must be True, which means at
+        # If user_id=None then SHOULD_USE_NO_AUTH_MODE must be False, which means at
         # this point the client was successfully authenticated and self._get_user_id()
         # will work.
         self._user_id = user_id or self._get_user_id()
@@ -269,7 +271,7 @@ class Client:
         host_name = (
             self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
         )
-        endpoint_name = "export" if self.should_use_authentication else "monaExport"
+        endpoint_name = "monaExport" if SHOULD_USE_NO_AUTH_MODE else "export"
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self):
@@ -291,7 +293,7 @@ class Client:
         is set to False.
         """
         return (
-            is_authenticated(self.api_key) if self.should_use_authentication else True
+            True if SHOULD_USE_NO_AUTH_MODE else is_authenticated(self.api_key)
         )
 
     def _get_user_id(self):
@@ -464,7 +466,7 @@ class Client:
         if client_response["failed"] > 0:
             handle_export_error(
                 f"Some messages didn't pass validation: {client_response}."
-                f"{self._get_unauthenticated_mode_error_message()}",
+                f"{Client._get_unauthenticated_mode_error_message()}",
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
@@ -499,7 +501,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_auth_header(self.api_key, self.should_use_authentication),
+            headers=get_auth_header(self.api_key),
             json=body,
         )
 
@@ -571,7 +573,7 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
-        if not author and not self.should_use_authentication:
+        if not author and SHOULD_USE_NO_AUTH_MODE:
             return self._handle_service_error(
                 "When using non authenticated client, author must be provided. "
             )
@@ -1096,23 +1098,23 @@ class Client:
         Logs an error and raises MonaServiceException if RAISE_SERVICE_EXCEPTIONS is
         true, returns false otherwise.
         """
-        error_message += self._get_unauthenticated_mode_error_message()
+        error_message += Client._get_unauthenticated_mode_error_message()
 
         self._logger.error(error_message)
         if self.raise_service_exceptions:
             raise MonaServiceException(error_message)
         return get_dict_result(False, None, error_message)
 
-    def _get_unauthenticated_mode_error_message(self):
+    @staticmethod
+    def _get_unauthenticated_mode_error_message():
         """
-        If should_use_authentication=False return an error message (suggesting
-        should_use_authentication mode turned off might be the cause for the exception)
-        and an empty string otherwise.
+        If AUTH_MODE=NO_AUTH_MODE return an error message (suggesting
+        this might be the cause for the exception), and an empty string otherwise.
         """
         return (
-            ""
-            if self.should_use_authentication
-            else UNAUTHENTICATED_CHECK_ERROR_MESSAGE
+            UNAUTHENTICATED_CHECK_ERROR_MESSAGE
+            if SHOULD_USE_NO_AUTH_MODE
+            else ""
         )
 
     def _default_bad_response_handler(self, json_response, status_code):
@@ -1137,7 +1139,6 @@ class Client:
                 f"{self._app_server_url}/{endpoint_name}",
                 headers=get_auth_header(
                     self.api_key,
-                    self.should_use_authentication,
                 ),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.

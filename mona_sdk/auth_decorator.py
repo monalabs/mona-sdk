@@ -7,6 +7,7 @@ from mona_sdk.auth import (
     should_refresh_token,
     handle_authentications_error,
 )
+from mona_sdk.auth_globals import SHOULD_USE_NO_AUTH_MODE
 
 
 class Decorators(object):
@@ -22,7 +23,7 @@ class Decorators(object):
             # args[0] is the current mona_client instance.
             mona_client = args[0]
 
-            if not mona_client.should_use_authentication:
+            if SHOULD_USE_NO_AUTH_MODE:
                 return decorated(*args, **kwargs)
 
             # If len(args) < 1, the wrapped function does not have args to log (neither
