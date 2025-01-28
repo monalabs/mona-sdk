@@ -36,8 +36,10 @@ from mona_sdk.messages import (
     RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
 from cachetools import TTLCache, cached
-from mona_sdk.misc_utils import ged_dict_with_filtered_out_none_values, \
-    get_boolean_value_for_env_var
+from mona_sdk.misc_utils import (
+    ged_dict_with_filtered_out_none_values,
+    get_boolean_value_for_env_var,
+)
 from mona_sdk.validation import (
     handle_export_error,
     update_mona_fields_names,
@@ -45,7 +47,7 @@ from mona_sdk.validation import (
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from mona_sdk.auth_consts import MANUAL_TOKEN_STRING_FOR_API_KEY
+from mona_sdk.auth_globals import MANUAL_TOKEN_STRING_FOR_API_KEY, FRONTEGG_AUTH_MODE
 from mona_sdk.client_util import (
     get_dict_result,
     remove_items_by_value,
@@ -56,7 +58,6 @@ from mona_sdk.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
 from requests.exceptions import ConnectionError
-from mona_sdk.auth_master_swithces import FRONTEGG_AUTH_MODE
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -200,6 +201,12 @@ class Client:
         self.secret = secret
         self.oidc_scope = oidc_scope
 
+        self._override_rest_api_host = override_rest_api_host
+        self._override_rest_api_full_url = override_rest_api_full_url
+
+        self._override_app_server_host = override_app_server_host
+        self._override_app_server_full_url = override_app_server_full_url
+
         self.raise_export_exceptions = raise_export_exceptions
         self.raise_service_exceptions = raise_service_exceptions
         self.should_log_failed_messages = should_log_failed_messages
@@ -225,13 +232,8 @@ class Client:
         # will work.
         self._user_id = user_id or self._get_user_id()
 
-        self._rest_api_url = (
-            override_rest_api_full_url
-            or self._get_rest_api_export_url(override_host=override_rest_api_host)
-        )
-        self._app_server_url = override_app_server_full_url or self._get_app_server_url(
-            override_host=override_app_server_host
-        )
+        self._rest_api_url = self._get_rest_api_export_url()
+        self._app_server_url = self._get_app_server_url()
 
         self.filter_none_fields_on_export = filter_none_fields_on_export
 
@@ -260,14 +262,23 @@ class Client:
         return self._manual_access_token
 
     def _get_rest_api_export_url(self, override_host=None):
+        if self._override_rest_api_full_url:
+            return self._override_rest_api_full_url
+
         http_protocol = "https" if self.should_use_ssl else "http"
-        host_name = override_host or f"incoming{self._user_id}.monalabs.io"
+        host_name = (
+            self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
+        )
         endpoint_name = "export" if self.should_use_authentication else "monaExport"
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
-    def _get_app_server_url(self, override_host=None):
+    def _get_app_server_url(self):
+        if self._override_app_server_full_url:
+            return self._override_app_server_full_url
+
         http_protocol = "https" if self.should_use_ssl else "http"
-        host_name = override_host or f"api{self._user_id}.monalabs.io"
+        host_name = self._override_rest_api_host or f"api{self._user_id}.monalabs.io"
+
         return f"{http_protocol}://{host_name}"
 
     def is_active(self):

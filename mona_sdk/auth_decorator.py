@@ -1,11 +1,11 @@
 from functools import wraps
 
 from mona_sdk.auth import (
-    _refresh_token,
+    refresh_token,
     is_authenticated,
     authentication_lock,
-    _should_refresh_token,
-    _handle_authentications_error,
+    should_refresh_token,
+    handle_authentications_error,
 )
 
 
@@ -34,23 +34,23 @@ class Decorators(object):
             message_to_log = args[1] if should_log_args else None
 
             if not is_authenticated(mona_client.api_key):
-                return _handle_authentications_error(
+                return handle_authentications_error(
                     "Mona's client is not authenticated",
                     mona_client.raise_authentication_exceptions,
                     message_to_log,
                 )
 
-            if _should_refresh_token(mona_client):
+            if should_refresh_token(mona_client):
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
-                    if _should_refresh_token(mona_client):
-                        refresh_token_response = _refresh_token(mona_client)
+                    if should_refresh_token(mona_client):
+                        refresh_token_response = refresh_token(mona_client)
 
                         if not refresh_token_response.ok:
 
                             # TODO(anat): Check if the current token is still valid to
                             #   call the function anyway.
-                            return _handle_authentications_error(
+                            return handle_authentications_error(
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
                                 mona_client.raise_authentication_exceptions,

@@ -1,7 +1,7 @@
 import os
 
 import requests
-from mona_sdk.auth_master_swithces import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE
+from mona_sdk.auth_globals import OIDC_AUTH_MODE, FRONTEGG_AUTH_MODE, AUTH_MODE
 
 AUTH_API_TOKEN_URL = os.environ.get(
     "MONA_SDK_AUTH_API_TOKEN_URL",
@@ -17,38 +17,48 @@ BASIC_HEADER = {"Content-Type": "application/json"}
 URLENCODED_HEADER = {"Content-Type": "application/x-www-form-urlencoded"}
 
 
-def _request_access_token_once(api_key, secret, oidc_scope=None):
+def request_token_for_frontegg(api_key, secret, _):
+    return requests.request(
+        "POST",
+        AUTH_API_TOKEN_URL,
+        headers=BASIC_HEADER,
+        json={"clientId": api_key, "secret": secret},
+    )
+
+
+def request_token_for_oidc(api_key, secret, oidc_scope):
+    data_kwargs = {
+        "client_id": api_key,
+        "client_secret": secret,
+        "grant_type": CLIENT_CREDENTIALS_GRANT_TYPE,
+    }
+
+    if oidc_scope:
+        data_kwargs["scope"] = oidc_scope
+
+    return requests.request(
+        "POST",
+        AUTH_API_TOKEN_URL,
+        headers=URLENCODED_HEADER,
+        data={**data_kwargs},
+    )
+
+
+AUTH_MODE_TO_REQUEST_ACCESS_TOKEN_FUNC = {
+    FRONTEGG_AUTH_MODE: request_token_for_frontegg,
+    OIDC_AUTH_MODE: request_token_for_oidc,
+}
+
+
+def request_access_token_once(api_key, secret, oidc_scope=None):
     """
     Sends an access token REST request and returns the response.
     """
 
-    if FRONTEGG_AUTH_MODE:
-        return requests.request(
-            "POST",
-            AUTH_API_TOKEN_URL,
-            headers=BASIC_HEADER,
-            json={"clientId": api_key, "secret": secret},
-        )
-
-    if OIDC_AUTH_MODE:
-        data_kwargs = {
-            "client_id": api_key,
-            "client_secret": secret,
-            "grant_type": CLIENT_CREDENTIALS_GRANT_TYPE,
-        }
-
-        if oidc_scope:
-            data_kwargs["scope"] = oidc_scope
-
-        return requests.request(
-            "POST",
-            AUTH_API_TOKEN_URL,
-            headers=URLENCODED_HEADER,
-            data={**data_kwargs},
-        )
+    return AUTH_MODE_TO_REQUEST_ACCESS_TOKEN_FUNC[AUTH_MODE]
 
 
-def _request_refresh_token_once(refresh_token_key):
+def request_refresh_token_once(refresh_token_key):
     """
     Sends a refresh token REST request and returns the response.
     """

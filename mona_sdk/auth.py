@@ -24,25 +24,22 @@ import datetime
 from threading import Lock
 
 from mona_sdk.logger import get_logger
-from mona_sdk.auth_consts import (
+from mona_sdk.auth_globals import (
     ERRORS,
     ACCESS_TOKEN,
     REFRESH_TOKEN,
-    EXPIRED_IN_OIDC,
     TIME_TO_REFRESH,
     IS_AUTHENTICATED,
-    EXPIRES_IN_FRONTEGG,
-    MANUAL_TOKEN_STRING_FOR_API_KEY,
+    MANUAL_TOKEN_STRING_FOR_API_KEY, USE_REFRESH_TOKENS, EXPIRES_KEY,
 )
 from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth_requests import (
     BASIC_HEADER,
-    _request_access_token_once,
-    _request_refresh_token_once,
+    request_access_token_once,
+    request_refresh_token_once,
 )
 from requests.models import Response
 from mona_sdk.client_exceptions import MonaAuthenticationException
-from mona_sdk.auth_master_swithces import FRONTEGG_AUTH_MODE, USE_REFRESH_TOKENS
 
 # A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
 # time to refresh the token before it expires (i.e. - in case
@@ -107,7 +104,7 @@ def initial_authentication(mona_client):
 
     else:
         # Failure
-        return _handle_authentications_error(
+        return handle_authentications_error(
             f"Mona's client could not authenticate. "
             f"errors: {_get_error_string_from_token_info(mona_client.api_key)}",
             mona_client.raise_authentication_exceptions,
@@ -121,7 +118,7 @@ def _get_error_string_from_token_info(api_key):
 
 def _request_access_token_with_retries(mona_client):
     return _get_auth_response_with_retries(
-        lambda: _request_access_token_once(
+        lambda: request_access_token_once(
             mona_client.api_key, mona_client.secret, mona_client.oidc_scope
         ),
         num_of_retries=mona_client.num_of_retries_for_authentication,
@@ -131,7 +128,7 @@ def _request_access_token_with_retries(mona_client):
 
 def _request_refresh_token_with_retries(refresh_token_key, mona_client):
     return _get_auth_response_with_retries(
-        lambda: _request_refresh_token_once(refresh_token_key),
+        lambda: request_refresh_token_once(refresh_token_key),
         num_of_retries=mona_client.num_of_retries_for_authentication,
         auth_wait_time_sec=mona_client.wait_time_for_authentication_retries,
     )
@@ -223,16 +220,14 @@ def _calculate_time_to_refresh(api_key):
     token_expires = datetime.datetime.now() + datetime.timedelta(
         seconds=_get_token_info_by_api_key(
             api_key,
-            token_data_arg=EXPIRES_IN_FRONTEGG
-            if FRONTEGG_AUTH_MODE
-            else EXPIRED_IN_OIDC,
+            token_data_arg=EXPIRES_KEY,
         )
     )
 
     return token_expires - REFRESH_TOKEN_SAFETY_MARGIN
 
 
-def _handle_authentications_error(
+def handle_authentications_error(
     error_message, should_raise_exception, message_to_log=None
 ):
     """
@@ -247,7 +242,7 @@ def _handle_authentications_error(
     return get_dict_result(False, None, error_message)
 
 
-def _should_refresh_token(mona_client):
+def should_refresh_token(mona_client):
     """
     :return: True if the token has expired, or is about to expire in
     REFRESH_TOKEN_SAFETY_MARGIN hours or less, False otherwise.
@@ -286,7 +281,7 @@ def _get_refresh_token_with_fallback(mona_client):
     return response
 
 
-def _refresh_token(mona_client):
+def refresh_token(mona_client):
     """
     Gets a new token and sets the needed fields.
     """
