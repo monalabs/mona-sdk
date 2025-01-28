@@ -31,6 +31,7 @@ from mona_sdk.auth_globals import (
     TIME_TO_REFRESH,
     IS_AUTHENTICATED,
     MANUAL_TOKEN_STRING_FOR_API_KEY, USE_REFRESH_TOKENS, EXPIRES_KEY,
+    NO_AUTH_MODE_IS_ON,
 )
 from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth_requests import (
@@ -64,7 +65,7 @@ authentication_lock = Lock()
 
 
 def initial_authentication(mona_client):
-    if mona_client.get_manual_access_token():
+    if NO_AUTH_MODE_IS_ON:
         get_logger().info("Manual token provided.")
 
         API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_KEY] = {
