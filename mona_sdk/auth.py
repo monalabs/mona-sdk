@@ -45,12 +45,18 @@ from mona_sdk.auth_requests import (
 )
 from mona_sdk.client_exceptions import MonaAuthenticationException
 
-# A new token expires after 22 hours, REFRESH_TOKEN_SAFETY_MARGIN is the safety gap of
-# time to refresh the token before it expires (i.e. - in case
+# As of 29/1/2025, a new token expires after 4 hours. REFRESH_TOKEN_SAFETY_MARGIN is the
+# safety gap of time to refresh the token before it expires (i.e. - in case
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
 # the client will automatically refresh the token to a new one).
-REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
-    hours=int(os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 2))
+REFRESH_TOKEN_SAFETY_MARGIN_HOURS = datetime.timedelta(
+    minutes=int(
+        os.environ.get(
+            "MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN_HOURS",
+            # Backward compatibility.
+            os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 0.5),
+        )
+    )
 )
 
 OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
@@ -75,6 +81,7 @@ def initial_authentication(mona_client):
             ACCESS_TOKEN: mona_client.get_manual_access_token(),
             IS_AUTHENTICATED: True,
         }
+
         return True
 
     if not is_authenticated(mona_client.api_key):
@@ -228,7 +235,7 @@ def _calculate_time_to_refresh(api_key):
         )
     )
 
-    return token_expires - REFRESH_TOKEN_SAFETY_MARGIN
+    return token_expires - REFRESH_TOKEN_SAFETY_MARGIN_HOURS
 
 
 def handle_authentications_error(

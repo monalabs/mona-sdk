@@ -28,6 +28,10 @@ from mona_sdk.auth import (
     initial_authentication,
     get_current_token_by_api_key,
 )
+from mona_sdk.auth_clients.manual_token_auth_clent import ManualTokenAuthClient
+from mona_sdk.auth_clients.mona_auth_client import MonaAuthClient
+from mona_sdk.auth_clients.no_auth_client import NoAuthClient
+from mona_sdk.auth_clients.oidc_auth_client import OidcAuthClient
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -52,14 +56,16 @@ from mona_sdk.client_util import (
     get_boolean_value_for_env_var,
     ged_dict_with_filtered_out_none_values,
 )
+
+from dataclasses import dataclass
+
 from mona_sdk.auth_globals import (
     AUTH_MODE,
-    FRONTEGG_AUTH_MODE,
     AUTH_MODES_WITH_USER_ID,
     SHOULD_USE_NO_AUTH_MODE,
     SHOULD_USE_MANUAL_AUTH_MODE,
-    MANUAL_TOKEN_STRING_FOR_API_KEY,
-    SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE,
+    MANUAL_TOKEN_STRING_FOR_API_KEY, NO_AUTH_MODE, OIDC_AUTH_MODE, MONA_AUTH_MODE,
+    MANUAL_TOKEN_AUTH_MODE,
 )
 from mona_sdk.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
@@ -142,11 +148,36 @@ CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
 
 
+@dataclass
+class AuthData:
+    api_key: str
+    secret: str
+    manual_access_token: str
+    oidc_scope: str
+    num_of_retries_for_authentication: int
+    wait_time_for_authentication_retries: int
+    raise_authentication_exceptions: bool
+
+
+
+AUTH_MODE_TO_CLIENT = {
+    OIDC_AUTH_MODE: OidcAuthClient,
+    MONA_AUTH_MODE: MonaAuthClient,
+    NO_AUTH_MODE: NoAuthClient,
+    MANUAL_TOKEN_AUTH_MODE: ManualTokenAuthClient,
+}
+
+
+
 class Client:
     """
     The main Mona python client class. Use this class to communicate with any of Mona's
     API.
     """
+
+    # todo think how to combine this with the envs thing that I need to change
+    def __new__(cls, auth_mode, *args, **kwargs):
+        return AUTH_MODE_TO_CLIENT[auth_mode](*args, **kwargs)
 
     def __init__(
         self,
@@ -174,6 +205,8 @@ class Client:
         manual_access_token=None,
         oidc_scope=None,
     ):
+
+
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
@@ -261,6 +294,18 @@ class Client:
             self._default_sampling_rate = self._latest_seen_sampling_config.get(
                 "default_factor", default_sampling_rate
             )
+
+        self.auth_data = AuthData(
+            api_key=self.api_key,
+            secret=self.secret,
+            manual_access_token=self._manual_access_token,
+            oidc_scope=self.oidc_scope,
+            num_of_retries_for_authentication=self.num_of_retries_for_authentication,
+            wait_time_for_authentication_retries=(
+                self.wait_time_for_authentication_retries
+            ),
+            raise_authentication_exceptions=self.raise_authentication_exceptions,
+        )
 
     def get_manual_access_token(self):
         return self._manual_access_token
@@ -1160,3 +1205,7 @@ class Client:
 
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
+
+
+
+
