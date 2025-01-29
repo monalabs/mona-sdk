@@ -323,8 +323,13 @@ class Client:
         """
         :return: The customer's user id (tenant id).
         """
+        current_token = get_current_token_by_api_key(self.api_key)
+        if not current_token:
+            return None
+
+
         decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key),
+            current_token,
             verify=False,
             options={"verify_signature": False},
         )
@@ -463,6 +468,7 @@ class Client:
                 message_copy["message"] = self._filter_none_fields(
                     message_copy["message"]
                 )
+
             # If the message was left empty after it was filtered, we don't want it to
             # be added.
             if message_copy["message"]:

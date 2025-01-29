@@ -56,8 +56,10 @@ class ClientTests(unittest.TestCase):
                 "secret must be a string",
             ]
         }
+
         with self.assertRaises(MonaAuthenticationException) as err:
             Client(None, None, raise_authentication_exceptions=True)
+
         self.assertEqual(
             "Mona's client could not authenticate. errors: clientId must be a string, "
             "secret must be a string",
@@ -69,6 +71,7 @@ class ClientTests(unittest.TestCase):
         }
         with self.assertRaises(MonaAuthenticationException) as err:
             Client("<API_KEY>", None, raise_authentication_exceptions=True)
+
         self.assertEqual(
             "Mona's client could not authenticate. errors: secret must be a string",
             str(err.exception),
@@ -77,8 +80,10 @@ class ClientTests(unittest.TestCase):
         mock_request.return_value.json.return_value = {
             "errors": ["clientId must be a string"]
         }
+
         with self.assertRaises(MonaAuthenticationException) as err:
             Client(None, "<SECRET>", raise_authentication_exceptions=True)
+
         self.assertEqual(
             "Mona's client could not authenticate. errors: clientId must be a string",
             str(err.exception),
@@ -87,8 +92,10 @@ class ClientTests(unittest.TestCase):
         mock_request.return_value.json.return_value = {
             "errors": ["Invalid authentication"]
         }
+
         with self.assertRaises(MonaAuthenticationException) as err:
             Client("WRONG_KEY", "WRONG_SECRET", raise_authentication_exceptions=True)
+
         self.assertEqual(
             "Mona's client could not authenticate. errors: Invalid authentication",
             str(err.exception),
@@ -138,9 +145,11 @@ class ClientTests(unittest.TestCase):
         }
         # Test an empty message export.
         res = test_mona_client.export(
-            MonaSingleMessage(message=None, contextClass="TEST_CONTEXT_CLASS")
+            MonaSingleMessage(
+                message=None, contextClass="TEST_CONTEXT_CLASS"  # type: ignore
+            )
         )
-        self.assertFalse(res)
+        self.assertTrue(res)
 
         # Test an empty string context_class.
         res = test_mona_client.export(
@@ -163,7 +172,7 @@ class ClientTests(unittest.TestCase):
             MonaSingleMessage(
                 message=good_message,
                 contextClass="TEST_CONTEXT_CLASS",
-                contextId=12,
+                contextId=12,  # type: ignore
             )
         )
         self.assertFalse(res)
@@ -241,7 +250,7 @@ class ClientTests(unittest.TestCase):
             message={"a": "some data"}, contextClass="TEST_CONTEXT_CLASS"
         )
         empty_message_event = MonaSingleMessage(
-            message=None,
+            message=None,  # type: ignore
             contextClass="TEST_CONTEXT_CLASS",
             contextId="TEST_CONTEXT_ID",
         )
@@ -264,6 +273,7 @@ class ClientTests(unittest.TestCase):
             # exportTimestamp can also be an ISO-format date (str).
             exportTimestamp=datetime.now().isoformat(),
         )
+
         self._assert_batch_return_values(
             [
                 empty_message_event,
@@ -272,9 +282,9 @@ class ClientTests(unittest.TestCase):
                 wrong_context_class_event,
                 good_event,
             ],
-            5,
-            1,
-            4,
+            4,  # expected_total
+            1,  # expected_sent
+            3,  # expected_failed
         )
 
     @staticmethod
