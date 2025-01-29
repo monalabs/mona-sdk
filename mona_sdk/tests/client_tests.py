@@ -14,7 +14,7 @@ from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationEx
 TEST_TOKEN = (
     "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRJZCI6InRlc3RfdGFuZW50X2lkIn0.d9lhbJi7pB"
     "ghbZ6YIr0sqy8E-KWxo1y6DtNjoMk4ikw"
-).encode()
+)
 
 
 class ClientTests(unittest.TestCase):
