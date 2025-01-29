@@ -48,12 +48,19 @@ from mona_sdk.client_util import (
     get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
-    keep_message_after_sampling, ged_dict_with_filtered_out_none_values,
+    keep_message_after_sampling,
     get_boolean_value_for_env_var,
+    ged_dict_with_filtered_out_none_values,
 )
-from mona_sdk.auth_globals import FRONTEGG_AUTH_MODE, MANUAL_TOKEN_STRING_FOR_API_KEY, \
-    SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE_ENV, SHOULD_USE_NO_AUTH_MODE, \
-    SHOULD_USE_MANUAL_AUTH_MODE
+from mona_sdk.auth_globals import (
+    AUTH_MODE,
+    FRONTEGG_AUTH_MODE,
+    AUTH_MODES_WITH_USER_ID,
+    SHOULD_USE_NO_AUTH_MODE,
+    SHOULD_USE_MANUAL_AUTH_MODE,
+    MANUAL_TOKEN_STRING_FOR_API_KEY,
+    SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE,
+)
 from mona_sdk.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
@@ -152,7 +159,8 @@ class Client:
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
-        # T
+        # TODO(elie): Make sure with Nemo that nobody uses this, otherwise we break
+        #   users that use it.
         should_use_authentication=None,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
@@ -178,22 +186,16 @@ class Client:
                 "must be provided."
             )
 
-        if SHOULD_USE_NO_AUTH_MODE and not user_id:
+        if not AUTH_MODE not in AUTH_MODES_WITH_USER_ID and not user_id:
             raise MonaInitializationException(
-                "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must be "
-                "provided."
-            )
-
-        if (manual_access_token or not FRONTEGG_AUTH_MODE) and not user_id:
-            raise MonaInitializationException(
-                f"When Mona Client is initiated with {FRONTEGG_AUTH_MODE=} or with "
-                "manual access token, then user_id must be provided. "
+                f"Mona Client is not initiated with an auth mode "
+                f"that requires user_id."
             )
 
         if sampling_config_name and context_class_to_sampling_rate:
             raise MonaInitializationException(
                 "Only one sampling method can be used at a time. Either remove "
-                "sampling_config_name or context_class_to_sampling_rate"
+                "sampling_config_name or context_class_to_sampling_rate."
             )
 
         self._logger = get_logger()
@@ -292,9 +294,7 @@ class Client:
         Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
         is set to False.
         """
-        return (
-            True if SHOULD_USE_NO_AUTH_MODE else is_authenticated(self.api_key)
-        )
+        return True if SHOULD_USE_NO_AUTH_MODE else is_authenticated(self.api_key)
 
     def _get_user_id(self):
         """
@@ -1111,11 +1111,7 @@ class Client:
         If AUTH_MODE=NO_AUTH_MODE return an error message (suggesting
         this might be the cause for the exception), and an empty string otherwise.
         """
-        return (
-            UNAUTHENTICATED_CHECK_ERROR_MESSAGE
-            if SHOULD_USE_NO_AUTH_MODE
-            else ""
-        )
+        return UNAUTHENTICATED_CHECK_ERROR_MESSAGE if SHOULD_USE_NO_AUTH_MODE else ""
 
     def _default_bad_response_handler(self, json_response, status_code):
         if (
