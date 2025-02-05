@@ -40,7 +40,6 @@ from mona_sdk.auth_globals import (
 )
 from mona_sdk.auth_requests import (
     BASIC_HEADER,
-    request_access_token_once,
     request_refresh_token_once,
 )
 from mona_sdk.client_exceptions import MonaAuthenticationException
@@ -73,68 +72,13 @@ API_KEYS_TO_TOKEN_DATA = {}
 authentication_lock = Lock()
 
 
-def initial_authentication(mona_client):
-    if SHOULD_USE_MANUAL_AUTH_MODE:
-        get_logger().info("Manual token mode is on.")
-
-        API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_KEY] = {
-            ACCESS_TOKEN: mona_client.get_manual_access_token(),
-            IS_AUTHENTICATED: True,
-        }
-
-        return True
-
-    if not is_authenticated(mona_client.api_key):
-        # Make sure only one instance of the client (with the given api_key) can get a
-        # new token. That token will be shared between all instances that share an
-        # api_key.
-        with authentication_lock:
-            # The inner check is needed to avoid multiple redundant authentications.
-            if not is_authenticated(mona_client.api_key):
-                response = _request_access_token_with_retries(mona_client)
-                API_KEYS_TO_TOKEN_DATA[mona_client.api_key] = response.json()
-
-                # response.ok will be True if authentication was successful and
-                # false if not.
-                API_KEYS_TO_TOKEN_DATA[mona_client.api_key][
-                    IS_AUTHENTICATED
-                ] = response.ok
-
-                time_to_refresh = _calculate_time_to_refresh(mona_client.api_key)
-                if time_to_refresh:
-                    API_KEYS_TO_TOKEN_DATA[mona_client.api_key][
-                        TIME_TO_REFRESH
-                    ] = time_to_refresh
-
-    if is_authenticated(mona_client.api_key):
-        # Success
-        get_logger().info(
-            f"New client token info: {API_KEYS_TO_TOKEN_DATA[mona_client.api_key]}"
-        )
-        return True
-
-    else:
-        # Failure
-        return handle_authentications_error(
-            f"Mona's client could not authenticate. "
-            f"errors: {_get_error_string_from_token_info(mona_client.api_key)}",
-            mona_client.raise_authentication_exceptions,
-        )
-
-
 def _get_error_string_from_token_info(api_key):
     error_list = _get_token_info_by_api_key(api_key, ERRORS)
     return ", ".join(_get_token_info_by_api_key(api_key, ERRORS)) if error_list else ""
 
 
-def _request_access_token_with_retries(mona_client):
-    return _get_auth_response_with_retries(
-        lambda: request_access_token_once(
-            mona_client.api_key, mona_client.secret, mona_client.oidc_scope
-        ),
-        num_of_retries=mona_client.num_of_retries_for_authentication,
-        auth_wait_time_sec=mona_client.wait_time_for_authentication_retries,
-    )
+# todo currently refactoring this guy.
+# todo don't think that we should use the scope here
 
 
 def _request_refresh_token_with_retries(refresh_token_key, mona_client):
@@ -220,7 +164,8 @@ def is_authenticated(api_key):
     return _get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
 
 
-def _calculate_time_to_refresh(api_key):
+# todo this is general auth - make sure that others also make sense here
+def _calculate_time_to_refresh(api_key, expires_key):
     """
     Calculates the time the access token needs to be refreshed and updates the relevant
     api_key token data.
@@ -231,7 +176,7 @@ def _calculate_time_to_refresh(api_key):
     token_expires = datetime.datetime.now() + datetime.timedelta(
         seconds=_get_token_info_by_api_key(
             api_key,
-            token_data_arg=EXPIRES_KEY,
+            token_data_arg=expires_key,
         )
     )
 

@@ -25,13 +25,10 @@ from cachetools import TTLCache, cached
 from mona_sdk.auth import (
     get_auth_header,
     is_authenticated,
-    initial_authentication,
     get_current_token_by_api_key,
 )
-from mona_sdk.auth_clients.manual_token_auth_clent import ManualTokenAuthClient
-from mona_sdk.auth_clients.mona_auth_client import MonaAuthClient
-from mona_sdk.auth_clients.no_auth_client import NoAuthClient
-from mona_sdk.auth_clients.oidc_auth_client import OidcAuthClient
+from mona_sdk.auth_requests import AUTH_API_TOKEN_URL
+from mona_sdk.get_authenticator import get_authenticator
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -64,7 +61,10 @@ from mona_sdk.auth_globals import (
     AUTH_MODES_WITH_USER_ID,
     SHOULD_USE_NO_AUTH_MODE,
     SHOULD_USE_MANUAL_AUTH_MODE,
-    MANUAL_TOKEN_STRING_FOR_API_KEY, NO_AUTH_MODE, OIDC_AUTH_MODE, MONA_AUTH_MODE,
+    MANUAL_TOKEN_STRING_FOR_API_KEY,
+    NO_AUTH_MODE,
+    OIDC_AUTH_MODE,
+    MONA_AUTH_MODE,
     MANUAL_TOKEN_AUTH_MODE,
 )
 from mona_sdk.auth_decorator import Decorators
@@ -148,24 +148,6 @@ CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
 
 
-@dataclass
-class AuthData:
-    api_key: str
-    secret: str
-    manual_access_token: str
-    oidc_scope: str
-    num_of_retries_for_authentication: int
-    wait_time_for_authentication_retries: int
-    raise_authentication_exceptions: bool
-
-
-
-AUTH_MODE_TO_CLIENT = {
-    OIDC_AUTH_MODE: OidcAuthClient,
-    MONA_AUTH_MODE: MonaAuthClient,
-    NO_AUTH_MODE: NoAuthClient,
-    MANUAL_TOKEN_AUTH_MODE: ManualTokenAuthClient,
-}
 
 
 
@@ -174,10 +156,6 @@ class Client:
     The main Mona python client class. Use this class to communicate with any of Mona's
     API.
     """
-
-    # todo think how to combine this with the envs thing that I need to change
-    def __new__(cls, auth_mode, *args, **kwargs):
-        return AUTH_MODE_TO_CLIENT[auth_mode](*args, **kwargs)
 
     def __init__(
         self,
@@ -192,7 +170,8 @@ class Client:
         should_use_ssl=SHOULD_USE_SSL,
         # TODO(elie): Make sure with Nemo that nobody uses this, otherwise we break
         #   users that use it.
-        should_use_authentication=None,
+        # todo am I changing a client default here? make sure that I don't ruin anything.
+        should_use_authentication=True,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
@@ -202,28 +181,25 @@ class Client:
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
-        manual_access_token=None,
+        # todo double check if this works with what asaf did there.
+        # todo will have to figure out by ourselves in which mode we
+        #   are in - not sure about this - think how do we want to tackle this.
+        access_token=None,
         oidc_scope=None,
+        auth_api_token_url=AUTH_API_TOKEN_URL
+        # todo think if I'm adding in the right place (in terms of positions)
+        # also how to deduct this from other envs.
     ):
 
+        # todo consider returning something a class here?
 
+        # todo adjust the param here.
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
         :param api_key: An api key provided to you by Mona.
         :param secret: The secret corresponding to the given api_key.
         """
-        if SHOULD_USE_MANUAL_AUTH_MODE and not manual_access_token:
-            raise MonaInitializationException(
-                "When MONA_SDK_AUTH_MODE is set to MANUAL_TOKEN, manual_access_token "
-                "must be provided."
-            )
-
-        if not AUTH_MODE not in AUTH_MODES_WITH_USER_ID and not user_id:
-            raise MonaInitializationException(
-                f"Mona Client is not initiated with an auth mode "
-                f"that requires user_id."
-            )
 
         if sampling_config_name and context_class_to_sampling_rate:
             raise MonaInitializationException(
@@ -233,9 +209,7 @@ class Client:
 
         self._logger = get_logger()
 
-        self.api_key = (
-            api_key if not manual_access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
-        )
+        self.api_key = 3 if not access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
         self.secret = secret
         self.oidc_scope = oidc_scope
 
@@ -250,23 +224,43 @@ class Client:
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
 
-        if not SHOULD_USE_NO_AUTH_MODE:
-            self._manual_access_token = manual_access_token
-            self.raise_authentication_exceptions = raise_authentication_exceptions
-            self.num_of_retries_for_authentication = num_of_retries_for_authentication
-            self.wait_time_for_authentication_retries = (
-                wait_time_for_authentication_retries
-            )
+        # todo Nemo wants to use props for everything here.
+        # todo  let's start with just making this work for no auth mode first
+        #   this should be the easiest.
 
-            could_authenticate = initial_authentication(self)
-            if not could_authenticate:
-                # TODO(anat): consider replacing this return with an if statement for
-                #  the next part.
-                return
 
-        # If user_id=None then SHOULD_USE_NO_AUTH_MODE must be False, which means at
-        # this point the client was successfully authenticated and self._get_user_id()
-        # will work.
+        # todo I don't think that I need to use the self here, because the self is the
+        #   part of the authenticator.
+        self.authenticator = get_authenticator(
+            api_key=api_key,
+            user_id=user_id,
+            secret=secret,
+            access_token=access_token,
+            should_use_authentication=should_use_authentication,
+            override_rest_api_full_url=override_rest_api_full_url,
+            override_rest_api_host=override_rest_api_host,
+            override_app_server_host=override_app_server_host,
+            override_app_server_full_url=override_app_server_full_url,
+            auth_api_token_url=auth_api_token_url,
+            num_of_retries_for_authentication=num_of_retries_for_authentication,
+            wait_time_for_authentication_retries=wait_time_for_authentication_retries,
+            raise_authentication_exceptions=raise_authentication_exceptions,
+        )
+
+        # todo I think that we don't really need those here
+        # self.raise_authentication_exceptions = raise_authentication_exceptions
+        # self.num_of_retries_for_authentication = num_of_retries_for_authentication
+        # self.wait_time_for_authentication_retries = (
+        #     wait_time_for_authentication_retries
+        # )
+
+        could_auth = self.authenticator.initial_auth()
+        if not could_auth:
+            logging.info("Initial auth failed.")
+            return
+
+        # We validate user_id for auth modes that do not support the usage of
+        # self._get_user_id() when initiating the authenticator.
         self._user_id = user_id or self._get_user_id()
 
         self._rest_api_url = self._get_rest_api_export_url()
@@ -275,7 +269,6 @@ class Client:
         self.filter_none_fields_on_export = filter_none_fields_on_export
 
         # Data sampling.
-
         self._sampling_config_name = sampling_config_name
         self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
         self._default_sampling_rate = default_sampling_rate
@@ -294,21 +287,6 @@ class Client:
             self._default_sampling_rate = self._latest_seen_sampling_config.get(
                 "default_factor", default_sampling_rate
             )
-
-        self.auth_data = AuthData(
-            api_key=self.api_key,
-            secret=self.secret,
-            manual_access_token=self._manual_access_token,
-            oidc_scope=self.oidc_scope,
-            num_of_retries_for_authentication=self.num_of_retries_for_authentication,
-            wait_time_for_authentication_retries=(
-                self.wait_time_for_authentication_retries
-            ),
-            raise_authentication_exceptions=self.raise_authentication_exceptions,
-        )
-
-    def get_manual_access_token(self):
-        return self._manual_access_token
 
     def _get_rest_api_export_url(self, override_host=None):
         if self._override_rest_api_full_url:
@@ -686,6 +664,7 @@ class Client:
                 ]
             }
             return get_dict_result(True, app_server_response, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -700,6 +679,7 @@ class Client:
         try:
             data = app_server_response["response_data"]["suggested_config"]
             return get_dict_result(True, data, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -1150,6 +1130,7 @@ class Client:
             raise MonaServiceException(error_message)
         return get_dict_result(False, None, error_message)
 
+    # todo think where do I put this thing
     @staticmethod
     def _get_unauthenticated_mode_error_message():
         """
@@ -1205,7 +1186,3 @@ class Client:
 
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
-
-
-
-

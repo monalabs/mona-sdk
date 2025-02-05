@@ -2,12 +2,10 @@ from functools import wraps
 
 from mona_sdk.auth import (
     refresh_token,
-    is_authenticated,
     authentication_lock,
     should_refresh_token,
     handle_authentications_error,
 )
-from mona_sdk.auth_globals import SHOULD_USE_NO_AUTH_MODE
 
 
 class Decorators(object):
@@ -20,11 +18,9 @@ class Decorators(object):
 
         @wraps(decorated)
         def inner(*args, **kwargs):
-            # args[0] is the current mona_client instance.
+            # Since we are decorating a method, the first argument is self, which is the
+            # Mona Client instance.
             mona_client = args[0]
-
-            if SHOULD_USE_NO_AUTH_MODE:
-                return decorated(*args, **kwargs)
 
             # If len(args) < 1, the wrapped function does not have args to log (neither
             # messages nor config)
@@ -34,14 +30,14 @@ class Decorators(object):
             # an authentication failure.
             message_to_log = args[1] if should_log_args else None
 
-            if not is_authenticated(mona_client.api_key):
+            if not mona_client.authenticator.is_authenticated(mona_client.api_key):
                 return handle_authentications_error(
                     "Mona's client is not authenticated",
-                    mona_client.raise_authentication_exceptions,
+                    mona_client.raise_auth_exceptions,
                     message_to_log,
                 )
 
-            if should_refresh_token(mona_client):
+            if mona_client.authenticator.should_refresh_token():
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
                     if should_refresh_token(mona_client):
@@ -54,7 +50,7 @@ class Decorators(object):
                             return handle_authentications_error(
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
-                                mona_client.raise_authentication_exceptions,
+                                mona_client.raise_auth_exceptions,
                                 message_to_log,
                             )
 
