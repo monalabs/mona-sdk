@@ -1,24 +1,42 @@
+import jwt
 import requests
 
+from mona_sdk.auth import get_current_token_by_api_key
 from mona_sdk.auth_globals import EXPIRES_KEY_IN_MONA
 from mona_sdk.auth_requests import BASIC_HEADER
 from mona_sdk.authenticators.base_auth import Base
+from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class MonaAuth(Base):
-    def __init__(self, auth_api_token_url, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._auth_api_token_url = auth_api_token_url
         self.expires_key = EXPIRES_KEY_IN_MONA
 
-    def initial_auth(self):
-        pass
+    def _raise_if_missing_params(self):
+        if not self.auth_api_token_url or not self.api_key or not self.secret:
+            raise MonaInitializationException(
+                "MonaAuth is initiated with missing params. "
+                "Please provide auth_api_token_url, api_key and secret."
+            )
 
     def request_access_token(self):
         return requests.request(
             "POST",
             # todo just make sure that we the correct value here
-            self._auth_api_token_url,
+            self.auth_api_token_url,
             headers=BASIC_HEADER,
             json={"clientId": self.api_key, "secret": self.secret},
         )
+
+    def get_user_id(self):
+        """
+        :return: The customer's user id (tenant id).
+        """
+        decoded_token = jwt.decode(
+            get_current_token_by_api_key(self.api_key),
+            verify=False,
+            options={"verify_signature": False},
+        )
+        return decoded_token["tenantId"]
+

@@ -19,13 +19,11 @@ import logging
 from json import JSONDecodeError
 from typing import List
 
-import jwt
 import requests
 from cachetools import TTLCache, cached
 from mona_sdk.auth import (
     get_auth_header,
     is_authenticated,
-    get_current_token_by_api_key,
 )
 from mona_sdk.auth_requests import AUTH_API_TOKEN_URL
 from mona_sdk.get_authenticator import get_authenticator
@@ -54,18 +52,10 @@ from mona_sdk.client_util import (
     ged_dict_with_filtered_out_none_values,
 )
 
-from dataclasses import dataclass
 
 from mona_sdk.auth_globals import (
-    AUTH_MODE,
-    AUTH_MODES_WITH_USER_ID,
     SHOULD_USE_NO_AUTH_MODE,
-    SHOULD_USE_MANUAL_AUTH_MODE,
     MANUAL_TOKEN_STRING_FOR_API_KEY,
-    NO_AUTH_MODE,
-    OIDC_AUTH_MODE,
-    MONA_AUTH_MODE,
-    MANUAL_TOKEN_AUTH_MODE,
 )
 from mona_sdk.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
@@ -117,12 +107,13 @@ FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
     "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
 )
 
-# SDK will randomly sample the sent data using this factor and disregard the sampled-
-# out data, unless the sent data is set on a class overridden by
+# SDK will randomly sample the data that was sent using this factor and disregard the
+# sampled-out data, unless the data that was sent is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
 DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
 
-# When set, SDK will randomly sample the sent data for any class keyed in the config.
+# When set, SDK will randomly sample the data that was sent for any class keyed in the
+# config.
 # See readme for more details.
 SAMPLING_CONFIG = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
@@ -146,9 +137,6 @@ CONTEXT_ID_FIELD_NAME = "contextId"
 
 CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
-
-
-
 
 
 class Client:
@@ -209,7 +197,8 @@ class Client:
 
         self._logger = get_logger()
 
-        self.api_key = 3 if not access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
+        # todo we need to change that obviously
+        self.api_key = 666 if not access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
         self.secret = secret
         self.oidc_scope = oidc_scope
 
@@ -228,9 +217,11 @@ class Client:
         # todo  let's start with just making this work for no auth mode first
         #   this should be the easiest.
 
-
         # todo I don't think that I need to use the self here, because the self is the
         #   part of the authenticator.
+
+        # todo before I support the multi purpose authenticator - let's
+        #   makes sure that we are ok with everything else here.
         self.authenticator = get_authenticator(
             api_key=api_key,
             user_id=user_id,
@@ -261,7 +252,7 @@ class Client:
 
         # We validate user_id for auth modes that do not support the usage of
         # self._get_user_id() when initiating the authenticator.
-        self._user_id = user_id or self._get_user_id()
+        self._user_id = user_id or self.authenticator.get_user_id()
 
         self._rest_api_url = self._get_rest_api_export_url()
         self._app_server_url = self._get_app_server_url()
@@ -288,7 +279,7 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
-    def _get_rest_api_export_url(self, override_host=None):
+    def _get_rest_api_export_url(self, _=None):
         if self._override_rest_api_full_url:
             return self._override_rest_api_full_url
 
@@ -318,17 +309,6 @@ class Client:
         is set to False.
         """
         return True if SHOULD_USE_NO_AUTH_MODE else is_authenticated(self.api_key)
-
-    def _get_user_id(self):
-        """
-        :return: The customer's user id (tenant id).
-        """
-        decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key),
-            verify=False,
-            options={"verify_signature": False},
-        )
-        return decoded_token["tenantId"]
 
     def _should_filter_none_fields(self, filter_none_fields):
         """
@@ -560,9 +540,9 @@ class Client:
                     failed = result_info["failed"]
                     failure_reasons = result_info["failure_reasons"]
 
-            except Exception:
+            except Exception as e:
                 failed = total
-                failure_reasons = "Failed to send the batch to Mona's servers"
+                failure_reasons = f"Failed to send the batch to Mona's servers {e}"
 
         # Return the total result of the batch.
         return {
@@ -588,7 +568,7 @@ class Client:
         :param author: (str) An email address identifying the configuration uploader.
         Mona will use this mail to send updates regarding re-creation of insights upon
         this configuration change. When not supplied, the author will be the Client's
-        api-key and you will not get updates regarding the changes mentioned above.
+        api-key, and you will not get updates regarding the changes mentioned above.
         Must be provided when using un-authenticated mode.
         :return: A dict holding the upload data:
         {
@@ -715,7 +695,7 @@ class Client:
         if not self._sampling_config_name:
             return
 
-        # Refetch the updated config from the index.
+        # Re-fetch the updated config from the index.
         sampling_config = self.get_sampling_factors()[0]
 
         if self._latest_seen_sampling_config == sampling_config:
@@ -927,7 +907,7 @@ class Client:
         return (
             self._handle_service_error(app_server_response["error_message"])
             if "error_message" in app_server_response
-            # return the CRC's of the segment itself
+            # Return the CRCs of the segment itself
             else get_dict_result(
                 True, app_server_response["response_data"]["crcs"], None
             )
@@ -1150,7 +1130,10 @@ class Client:
         return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     def _app_server_request(
-        self, endpoint_name, data=None, custom_bad_response_handler=None
+        self,
+        endpoint_name,
+        data=None,
+        custom_bad_response_handler=lambda json_response, status_code: None,
     ):
         """
         Send a request to Mona's app-server given endpoint with the given data (should
@@ -1160,7 +1143,9 @@ class Client:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
                 headers=get_auth_header(
-                    self.api_key,
+                    # todo think about this change - aren't we're taking some ability that we had before? - this is important
+                    # self.api_key,
+                    self.authenticator.api_key,
                 ),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.

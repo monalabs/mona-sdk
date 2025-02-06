@@ -73,8 +73,8 @@ authentication_lock = Lock()
 
 
 def _get_error_string_from_token_info(api_key):
-    error_list = _get_token_info_by_api_key(api_key, ERRORS)
-    return ", ".join(_get_token_info_by_api_key(api_key, ERRORS)) if error_list else ""
+    error_list = get_token_info_by_api_key(api_key, ERRORS)
+    return ", ".join(get_token_info_by_api_key(api_key, ERRORS)) if error_list else ""
 
 
 # todo currently refactoring this guy.
@@ -145,10 +145,10 @@ def get_current_token_by_api_key(api_key):
     """
     :return: The given api_key's current access token.
     """
-    return _get_token_info_by_api_key(api_key, ACCESS_TOKEN)
+    return get_token_info_by_api_key(api_key, ACCESS_TOKEN)
 
 
-def _get_token_info_by_api_key(api_key, token_data_arg):
+def get_token_info_by_api_key(api_key, token_data_arg):
     """
     Returns the value of the wanted data for the given api_key.
     Returns None if the api_key or the arg does not exist.
@@ -156,12 +156,13 @@ def _get_token_info_by_api_key(api_key, token_data_arg):
     return API_KEYS_TO_TOKEN_DATA.get(api_key, {}).get(token_data_arg)
 
 
+# todo so we'll remove this soon?
 def is_authenticated(api_key):
     """
     :return: True if Mona's client holds a valid token and can communicate with Mona's
     servers (or can refresh the token in order to), False otherwise.
     """
-    return _get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
+    return get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
 
 
 # todo this is general auth - make sure that others also make sense here
@@ -174,7 +175,7 @@ def _calculate_time_to_refresh(api_key, expires_key):
         return None
 
     token_expires = datetime.datetime.now() + datetime.timedelta(
-        seconds=_get_token_info_by_api_key(
+        seconds=get_token_info_by_api_key(
             api_key,
             token_data_arg=expires_key,
         )
@@ -191,8 +192,10 @@ def handle_authentications_error(
     RAISE_AUTHENTICATION_EXCEPTIONS is true, else returns false.
     """
     get_logger().error(error_message)
+
     if message_to_log:
         get_logger().error(f"Failed to send the following to mona: {message_to_log}")
+
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)
     return get_dict_result(False, None, error_message)
@@ -209,8 +212,8 @@ def should_refresh_token(mona_client):
         return False
 
     return (
-        _get_token_info_by_api_key(mona_client.api_key, TIME_TO_REFRESH)
-        < datetime.datetime.now()
+            get_token_info_by_api_key(mona_client.api_key, TIME_TO_REFRESH)
+            < datetime.datetime.now()
     )
 
 
@@ -220,7 +223,7 @@ def _get_refresh_token_with_fallback(mona_client):
     if not SHOULD_USE_REFRESH_TOKENS:
         return _request_access_token_with_retries(mona_client)
 
-    refresh_token_key = _get_token_info_by_api_key(mona_client.api_key, REFRESH_TOKEN)
+    refresh_token_key = get_token_info_by_api_key(mona_client.api_key, REFRESH_TOKEN)
     response = _request_refresh_token_with_retries(refresh_token_key, mona_client)
 
     if not response.ok:

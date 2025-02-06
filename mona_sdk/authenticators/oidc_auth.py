@@ -2,37 +2,47 @@ from abc import abstractmethod
 
 import requests
 
-from mona_sdk.auth_globals import IS_AUTHENTICATED, EXPIRES_KEY_IN_OIDC, TIME_TO_REFRESH
+from mona_sdk.auth_globals import EXPIRES_KEY_IN_OIDC
 from mona_sdk.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, URLENCODED_HEADER
 from mona_sdk.authenticators.base_auth import Base
+from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class OidcAuth(Base):
-    # tooo maybe shouldn't support this thing with args at all?
-    def __init__(self, api_key, auth_api_token_url, *args, oidc_scope=None, **kwargs):
+    # todo maybe shouldn't support this thing with args at all?
+    def __init__(self, api_key, *args, oidc_scope=None, **kwargs):
         super().__init__(api_key, *args, **kwargs)
-        self._auth_api_token_url = auth_api_token_url
         self.oidc_scope = oidc_scope
         self.expires_key = EXPIRES_KEY_IN_OIDC
 
+    def _raise_if_missing_params(self):
+        if not self.user_id:
+            raise MonaInitializationException(
+                f"Mona Client is initiated with an auth mode that requires user_id."
+            )
 
-    def _request_access_token_with_retries(self):
-        pass
+        if (
+                not self.override_rest_api_host
+                and not self.override_rest_api_full_url
+                and not self.override_app_server_host
+                and not self.override_app_server_full_url
+        ):
+            raise MonaInitializationException(
+                "Mona client is initiated with an "
+                "auth mode the requires a host or a "
+                "full url."
+            )
 
-    def initial_auth(self):
-        pass
 
-    @abstractmethod
-    def is_authenticated(self, _):
-        pass
-
-    @abstractmethod
-    def should_refresh_token(_):
-        pass
+        if not self.auth_api_token_url or not self.api_key or not self.secret:
+            raise MonaInitializationException(
+                "MonaAuth is initiated with missing params. "
+                "Please provide auth_api_token_url, api_key and secret."
+            )
 
     # todo interesting how to implement this
     @abstractmethod
-    def refresh_token(_):
+    def refresh_token(self):
         pass
 
     def request_access_token(self):
@@ -49,7 +59,7 @@ class OidcAuth(Base):
         return requests.request(
             "POST",
             # todo think where is this going to come from
-            self._auth_api_token_url,
+            self.auth_api_token_url,
             headers=URLENCODED_HEADER,
             data={**data_kwargs},
         )

@@ -30,10 +30,10 @@ class Decorators(object):
             # an authentication failure.
             message_to_log = args[1] if should_log_args else None
 
-            if not mona_client.authenticator.is_authenticated(mona_client.api_key):
+            if not mona_client.authenticator.is_authenticated():
                 return handle_authentications_error(
                     "Mona's client is not authenticated",
-                    mona_client.raise_auth_exceptions,
+                    mona_client.authenticator.raise_auth_exceptions,
                     message_to_log,
                 )
 
