@@ -56,23 +56,18 @@ def _get_auth_mode(
 
 
 def get_authenticator(
-    api_key,
-    secret,
-    access_token,
-    user_id,
     should_use_authentication,
+    access_token,
     override_rest_api_full_url,
     override_rest_api_host,
     override_app_server_host,
     override_app_server_full_url,
-    auth_api_token_url,
-    num_of_retries_for_authentication,
-    wait_time_for_authentication_retries,
-    raise_authentication_exceptions,
+    **kwargs
 ):
 
     # todo think if we want to use an override here
-    #   check with Nemo where do we stand on this.
+    #   check with Nemo where do we stand on this - I think that we can use
+    #   manual force here, so no worries
     auth_mode = _get_auth_mode(
         should_use_authentication,
         access_token,
@@ -83,17 +78,10 @@ def get_authenticator(
     )
 
     return AUTH_MODE_TO_AUTHENTICATOR_CLASS[auth_mode](
-        api_key=api_key,
-        secret=secret,
-        auth_api_token_url=auth_api_token_url,
         access_token=access_token,
-        user_id=user_id,
-        # todo those are three things here that are important.
-        num_of_retries_for_authentication=num_of_retries_for_authentication,
-        wait_time_for_authentication_retries=wait_time_for_authentication_retries,
-        raise_authentication_exceptions=raise_authentication_exceptions,
         override_rest_api_full_url=override_rest_api_full_url,
         override_rest_api_host=override_rest_api_host,
         override_app_server_host=override_app_server_host,
         override_app_server_full_url=override_app_server_full_url,
+        **kwargs
     )

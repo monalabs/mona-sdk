@@ -30,7 +30,7 @@ class MonaSingleMessage:
         contextClass="MY_CONTEXT_CLASS_NAME",
         contextId=<the context instance unique id>,
         exportTimestamp=<the message export timestamp>,
-        action=<the wanted action>,
+        action=<the wanted action>
     )
     """
 

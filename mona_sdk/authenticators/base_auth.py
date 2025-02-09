@@ -9,7 +9,11 @@ from mona_sdk.auth import (
     _get_auth_response_with_retries,
     get_token_info_by_api_key,
 )
-from mona_sdk.auth_globals import IS_AUTHENTICATED, TIME_TO_REFRESH
+from mona_sdk.auth_globals import (
+    IS_AUTHENTICATED,
+    TIME_TO_REFRESH,
+    SHOULD_USE_REFRESH_TOKENS,
+)
 from mona_sdk.logger import get_logger
 
 
@@ -22,6 +26,7 @@ class Base:
         wait_time_for_authentication_retries,
         raise_authentication_exceptions,
         auth_api_token_url=None,
+        refresh_token_url=None,
         access_token=None,
         user_id=None,
         override_app_server_host=None,
@@ -41,6 +46,7 @@ class Base:
         self.override_rest_api_host = override_rest_api_host
         self.override_rest_api_full_url = override_rest_api_full_url
         self.auth_api_token_url = auth_api_token_url
+        self.refresh_token_url=refresh_token_url
 
         # Will be overwritten in the child which are going to use this property.
         self.expires_key = None
@@ -103,11 +109,72 @@ class Base:
         return get_token_info_by_api_key(self.api_key, IS_AUTHENTICATED)
 
     def request_access_token(self):
-        pass
+        raise NotImplementedError
 
+    def request_refresh_token(self):
+        raise NotImplementedError
+
+    # todo what about using this if there is no success in the first one?
     def _request_access_token_with_retries(self):
         return _get_auth_response_with_retries(
             lambda: self.request_access_token(),
             num_of_retries=self.num_of_retries,
             auth_wait_time_sec=self.auth_wait_time_sec,
         )
+
+    def _request_refresh_token_with_retries(self):
+        return _get_auth_response_with_retries(
+            lambda: self.request_refresh_token(),
+            num_of_retries=self.num_of_retries,
+            auth_wait_time_sec=self.auth_wait_time_sec,
+        )
+
+    def refresh_token(self):
+        """
+        Gets a new token and sets the needed fields.
+        """
+
+        response = self._get_refresh_token_with_fallback()
+
+        # The current client token info will not change if the response was bad, so that on
+        # the next function call the client will try to refresh the token again.
+        if not response.ok:
+            return response
+
+        # Update the client's new token info.
+        API_KEYS_TO_TOKEN_DATA[self.api_key] = response.json()
+
+        API_KEYS_TO_TOKEN_DATA[self.api_key][IS_AUTHENTICATED] = True
+
+        time_to_refresh = _calculate_time_to_refresh(self.api_key, self.expires_key)
+
+        if time_to_refresh:
+            API_KEYS_TO_TOKEN_DATA[self.api_key][TIME_TO_REFRESH] = time_to_refresh
+
+        get_logger().info(
+            f"Refreshed access token, the new token info:"
+            f" {API_KEYS_TO_TOKEN_DATA[self.api_key]}"
+        )
+
+        return response
+
+    def _get_refresh_token_with_fallback(self):
+
+        # TODO(elie): Support refresh tokens for OIDC.
+        # todo move this env to become a normal one
+        if not SHOULD_USE_REFRESH_TOKENS:
+            return self._request_access_token_with_retries()
+
+        response = self._request_refresh_token_with_retries()
+
+        if not response.ok:
+            get_logger().warning(
+                f"Failed to refresh the access token, trying to get a new one. "
+                f"{response.text}"
+            )
+
+            # Fall back to regular access tokens
+            response = self._request_access_token_with_retries()
+
+        return response
+

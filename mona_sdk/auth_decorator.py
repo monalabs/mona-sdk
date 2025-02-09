@@ -1,9 +1,7 @@
 from functools import wraps
 
 from mona_sdk.auth import (
-    refresh_token,
     authentication_lock,
-    should_refresh_token,
     handle_authentications_error,
 )
 
@@ -40,8 +38,11 @@ class Decorators(object):
             if mona_client.authenticator.should_refresh_token():
                 with authentication_lock:
                     # The inner check is needed to avoid double token refresh.
-                    if should_refresh_token(mona_client):
-                        refresh_token_response = refresh_token(mona_client)
+
+                    if mona_client.authenticator.should_refresh_token():
+                        refresh_token_response = (
+                            mona_client.authenticator.refresh_token()
+                        )
 
                         if not refresh_token_response.ok:
 
@@ -50,6 +51,7 @@ class Decorators(object):
                             return handle_authentications_error(
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
+                                # todo this shouldn't be here as well
                                 mona_client.raise_auth_exceptions,
                                 message_to_log,
                             )

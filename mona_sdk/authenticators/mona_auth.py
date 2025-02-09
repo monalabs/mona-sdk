@@ -1,8 +1,8 @@
 import jwt
 import requests
 
-from mona_sdk.auth import get_current_token_by_api_key
-from mona_sdk.auth_globals import EXPIRES_KEY_IN_MONA
+from mona_sdk.auth import get_current_token_by_api_key, get_token_info_by_api_key
+from mona_sdk.auth_globals import EXPIRES_KEY_IN_MONA, REFRESH_TOKEN_KEY
 from mona_sdk.auth_requests import BASIC_HEADER
 from mona_sdk.authenticators.base_auth import Base
 from mona_sdk.client_exceptions import MonaInitializationException
@@ -40,3 +40,18 @@ class MonaAuth(Base):
         )
         return decoded_token["tenantId"]
 
+    def request_refresh_token(self):
+        """
+        Sends a refresh token REST request and returns the response.
+        """
+        return requests.request(
+            "POST",
+            self.refresh_token_url,
+            headers=BASIC_HEADER,
+            # todo what is this weird usage of a dict all over the place
+            json={
+                "refreshToken": get_token_info_by_api_key(
+                    self.api_key, REFRESH_TOKEN_KEY
+                )
+            },
+        )

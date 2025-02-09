@@ -10,7 +10,7 @@ EXPIRES_KEY_IN_OIDC = "expires_in"
 ACCESS_TOKEN_IN_OIDC = "access_token"
 ACCESS_TOKEN_IN_MONA = "accessToken"
 
-REFRESH_TOKEN = "refreshToken"
+REFRESH_TOKEN_KEY = "refreshToken"
 TIME_TO_REFRESH = "timeToRefresh"
 
 IS_AUTHENTICATED = "isAuthenticated"

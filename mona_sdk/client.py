@@ -25,7 +25,7 @@ from mona_sdk.auth import (
     get_auth_header,
     is_authenticated,
 )
-from mona_sdk.auth_requests import AUTH_API_TOKEN_URL
+from mona_sdk.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
 from mona_sdk.get_authenticator import get_authenticator
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
@@ -174,7 +174,8 @@ class Client:
         #   are in - not sure about this - think how do we want to tackle this.
         access_token=None,
         oidc_scope=None,
-        auth_api_token_url=AUTH_API_TOKEN_URL
+        auth_api_token_url=AUTH_API_TOKEN_URL,
+        refresh_token_url=REFRESH_TOKEN_URL
         # todo think if I'm adding in the right place (in terms of positions)
         # also how to deduct this from other envs.
     ):
@@ -233,6 +234,7 @@ class Client:
             override_app_server_host=override_app_server_host,
             override_app_server_full_url=override_app_server_full_url,
             auth_api_token_url=auth_api_token_url,
+            refresh_token_url=refresh_token_url,
             num_of_retries_for_authentication=num_of_retries_for_authentication,
             wait_time_for_authentication_retries=wait_time_for_authentication_retries,
             raise_authentication_exceptions=raise_authentication_exceptions,
