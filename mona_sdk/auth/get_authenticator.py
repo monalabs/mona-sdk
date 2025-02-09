@@ -1,13 +1,13 @@
-from mona_sdk.auth_globals import (
+from mona_sdk.auth.auth_globals import (
     MONA_AUTH_MODE,
     OIDC_AUTH_MODE,
     MANUAL_TOKEN_AUTH_MODE,
     NO_AUTH_MODE,
 )
-from mona_sdk.authenticators.manual_token_auth import ManualTokenAuth
-from mona_sdk.authenticators.mona_auth import MonaAuth
-from mona_sdk.authenticators.no_auth import NoAuth
-from mona_sdk.authenticators.oidc_auth import OidcAuth
+from mona_sdk.auth.auth_classes.manual_token_auth import ManualTokenAuth
+from mona_sdk.auth.auth_classes.mona_auth import MonaAuth
+from mona_sdk.auth.auth_classes.no_auth import NoAuth
+from mona_sdk.auth.auth_classes.oidc_auth import OidcAuth
 
 
 # todo we might want to move this from here
@@ -65,9 +65,6 @@ def get_authenticator(
     **kwargs
 ):
 
-    # todo think if we want to use an override here
-    #   check with Nemo where do we stand on this - I think that we can use
-    #   manual force here, so no worries
     auth_mode = _get_auth_mode(
         should_use_authentication,
         access_token,

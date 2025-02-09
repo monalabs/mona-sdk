@@ -1,4 +1,4 @@
-from mona_sdk.authenticators.base_auth import Base
+from mona_sdk.auth.auth_classes.base_auth import Base
 
 
 class NoAuth(Base):

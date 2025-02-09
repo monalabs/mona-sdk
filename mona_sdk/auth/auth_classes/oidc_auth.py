@@ -2,9 +2,9 @@ from abc import abstractmethod
 
 import requests
 
-from mona_sdk.auth_globals import EXPIRES_KEY_IN_OIDC
-from mona_sdk.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, URLENCODED_HEADER
-from mona_sdk.authenticators.base_auth import Base
+from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC
+from mona_sdk.auth.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, URLENCODED_HEADER
+from mona_sdk.auth.auth_classes.base_auth import Base
 from mona_sdk.client_exceptions import MonaInitializationException
 
 

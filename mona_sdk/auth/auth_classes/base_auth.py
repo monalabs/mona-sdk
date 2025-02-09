@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from mona_sdk.auth import (
+from mona_sdk.auth.auth_utils import (
     authentication_lock,
     API_KEYS_TO_TOKEN_DATA,
     _calculate_time_to_refresh,
@@ -9,7 +9,7 @@ from mona_sdk.auth import (
     _get_auth_response_with_retries,
     get_token_info_by_api_key,
 )
-from mona_sdk.auth_globals import (
+from mona_sdk.auth.auth_globals import (
     IS_AUTHENTICATED,
     TIME_TO_REFRESH,
     SHOULD_USE_REFRESH_TOKENS,
@@ -178,3 +178,4 @@ class Base:
 
         return response
 
+# todo just thinking about how to determine in which auth mode we are

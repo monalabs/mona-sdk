@@ -26,7 +26,7 @@ from threading import Lock
 from mona_sdk.logger import get_logger
 from requests.models import Response
 from mona_sdk.client_util import get_dict_result
-from mona_sdk.auth_globals import (
+from mona_sdk.auth.auth_globals import (
     ERRORS,
     ACCESS_TOKEN,
     TIME_TO_REFRESH,
@@ -34,7 +34,7 @@ from mona_sdk.auth_globals import (
     SHOULD_USE_NO_AUTH_MODE,
     SHOULD_USE_REFRESH_TOKENS,
 )
-from mona_sdk.auth_requests import (
+from mona_sdk.auth.auth_requests import (
     BASIC_HEADER,
 )
 from mona_sdk.client_exceptions import MonaAuthenticationException

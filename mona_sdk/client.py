@@ -21,12 +21,12 @@ from typing import List
 
 import requests
 from cachetools import TTLCache, cached
-from mona_sdk.auth import (
+from mona_sdk.auth.auth_utils import (
     get_auth_header,
     is_authenticated,
 )
-from mona_sdk.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
-from mona_sdk.get_authenticator import get_authenticator
+from mona_sdk.auth.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
+from mona_sdk.auth.get_authenticator import get_authenticator
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -53,11 +53,11 @@ from mona_sdk.client_util import (
 )
 
 
-from mona_sdk.auth_globals import (
+from mona_sdk.auth.auth_globals import (
     SHOULD_USE_NO_AUTH_MODE,
     MANUAL_TOKEN_STRING_FOR_API_KEY,
 )
-from mona_sdk.auth_decorator import Decorators
+from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
 
