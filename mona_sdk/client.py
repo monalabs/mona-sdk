@@ -22,7 +22,6 @@ from typing import List
 import requests
 from cachetools import TTLCache, cached
 from mona_sdk.auth.auth_utils import (
-    get_auth_header,
     is_authenticated,
 )
 from mona_sdk.auth.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
@@ -486,6 +485,7 @@ class Client:
 
         return client_response
 
+    # todo also make sure that you fix this
     def _send_mona_rest_api_request(
         self, messages, default_action=None, sample_config_name=None
     ):
@@ -506,7 +506,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_auth_header(self.api_key),
+            headers=self.authenticator.get_auth_header(),
             json=body,
         )
 
@@ -1144,10 +1144,10 @@ class Client:
         try:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
-                headers=get_auth_header(
+                headers=self.authenticator.get_auth_header(
                     # todo think about this change - aren't we're taking some ability that we had before? - this is important
                     # self.api_key,
-                    self.authenticator.api_key,
+                    # self.authenticator.api_key,
                 ),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.

@@ -3,10 +3,13 @@ from abc import abstractmethod
 
 import requests
 
-from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, TIME_TO_REFRESH_INTERNAL_KEY
-from mona_sdk.auth.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, URLENCODED_HEADER
+from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, \
+    TIME_TO_REFRESH_INTERNAL_KEY, OIDC_ACCESS_TOKEN_KEY
+from mona_sdk.auth.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, \
+    URLENCODED_HEADER, BASIC_HEADER
 from mona_sdk.auth.auth_classes.base_auth import Base
-from mona_sdk.auth.auth_utils import get_token_info_by_api_key
+from mona_sdk.auth.auth_utils import get_token_info_by_api_key, \
+    get_current_token_by_api_key
 from mona_sdk.client_exceptions import MonaInitializationException
 
 
@@ -68,3 +71,14 @@ class OidcAuth(Base):
 
     # todo this is not the right place here.
     # TODO(elie): Support refresh tokens in OIDC.
+
+    def get_auth_header(self):
+        token = get_current_token_by_api_key(
+            api_key=self.api_key, access_token_key=OIDC_ACCESS_TOKEN_KEY
+        )
+
+        return {
+            **BASIC_HEADER,
+            "Authorization": f"Bearer {token}",
+        }
+

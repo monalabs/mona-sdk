@@ -12,6 +12,7 @@ from mona_sdk.auth.auth_globals import (
     REFRESH_TOKEN_KEY,
     SHOULD_USE_REFRESH_TOKENS,
     TIME_TO_REFRESH_INTERNAL_KEY,
+    MONA_ACCESS_TOKEN_KEY,
 )
 from mona_sdk.auth.auth_requests import BASIC_HEADER
 from mona_sdk.auth.auth_classes.base_auth import Base
@@ -45,7 +46,7 @@ class MonaAuth(Base):
         :return: The customer's user id (tenant id).
         """
         decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key),
+            get_current_token_by_api_key(self.api_key, MONA_ACCESS_TOKEN_KEY),
             verify=False,
             options={"verify_signature": False},
         )
@@ -67,3 +68,12 @@ class MonaAuth(Base):
             },
         )
 
+    def get_auth_header(self):
+        token = get_current_token_by_api_key(
+            api_key=self.api_key, access_token_key=MONA_ACCESS_TOKEN_KEY
+        )
+
+        return {
+            **BASIC_HEADER,
+            "Authorization": f"Bearer {token}",
+        }

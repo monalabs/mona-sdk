@@ -1,6 +1,7 @@
 import datetime
 from abc import abstractmethod
 
+from mona_sdk.auth.auth_requests import BASIC_HEADER
 from mona_sdk.auth.auth_utils import (
     authentication_lock,
     API_KEYS_TO_TOKEN_DATA,
@@ -187,3 +188,10 @@ class Base:
                 get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
                 < datetime.datetime.now()
         )
+
+     # tood make sure I kill this env
+     #        if SHOULD_USE_NO_AUTH_MODE
+
+    def get_auth_header(self):
+        return BASIC_HEADER
+

@@ -1,5 +1,8 @@
-from mona_sdk.auth.auth_utils import API_KEYS_TO_TOKEN_DATA
-from mona_sdk.auth.auth_globals import MANUAL_TOKEN_STRING_FOR_API_KEY, IS_AUTHENTICATED
+from mona_sdk.auth.auth_requests import BASIC_HEADER
+from mona_sdk.auth.auth_utils import API_KEYS_TO_TOKEN_DATA, \
+    get_current_token_by_api_key
+from mona_sdk.auth.auth_globals import MANUAL_TOKEN_STRING_FOR_API_KEY, \
+    IS_AUTHENTICATED, MANUAL_ACCESS_TOKEN_KEY
 from mona_sdk.auth.auth_classes.base_auth import Base
 from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.logger import get_logger
@@ -9,6 +12,7 @@ from mona_sdk.logger import get_logger
 class ManualTokenAuth(Base):
     def __init__(self, user_id, *args, **kwargs):
         super().__init__(*args, user_id=user_id, **kwargs)
+        self.api_key = MANUAL_TOKEN_STRING_FOR_API_KEY
 
     def _raise_if_missing_params(self):
         if not self.user_id:
@@ -37,7 +41,7 @@ class ManualTokenAuth(Base):
             # todo where is this going to come from?
             #   let's assume that
             # todo it's interesting - wri
-            # ACCESS_TOKEN: mona_client.get_manual_access_token(),
+            MANUAL_ACCESS_TOKEN_KEY: self.access_token,
             IS_AUTHENTICATED: True,
         }
 
@@ -48,4 +52,14 @@ class ManualTokenAuth(Base):
 
     def should_refresh_token(self):
         return False
+
+    def get_auth_header(self):
+        token = get_current_token_by_api_key(
+            api_key=self.api_key, access_token_key=MANUAL_ACCESS_TOKEN_KEY
+        )
+
+        return {
+            **BASIC_HEADER,
+            "Authorization": f"Bearer {token}",
+        }
 

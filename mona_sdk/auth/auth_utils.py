@@ -134,11 +134,11 @@ def _create_a_bad_response(content):
     return response
 
 
-def get_current_token_by_api_key(api_key):
+def get_current_token_by_api_key(api_key, access_token_key):
     """
     :return: The given api_key's current access token.
     """
-    return get_token_info_by_api_key(api_key, ACCESS_TOKEN)
+    return get_token_info_by_api_key(api_key, access_token_key)
 
 
 def get_token_info_by_api_key(api_key, token_data_arg):
@@ -199,13 +199,3 @@ def handle_authentications_error(
 
 
 
-def get_auth_header(api_key):
-
-    return (
-        BASIC_HEADER
-        if SHOULD_USE_NO_AUTH_MODE
-        else {
-            **BASIC_HEADER,
-            "Authorization": f"Bearer {get_current_token_by_api_key(api_key)}",
-        }
-    )
