@@ -9,7 +9,7 @@ from mona_sdk.auth.auth_utils import (
 )
 from mona_sdk.auth.auth_globals import (
     EXPIRES_KEY_IN_MONA,
-    REFRESH_TOKEN_KEY,
+    MONA_REFRESH_TOKEN_KEY,
     SHOULD_USE_REFRESH_TOKENS,
     TIME_TO_REFRESH_INTERNAL_KEY,
     MONA_ACCESS_TOKEN_KEY,
@@ -35,7 +35,6 @@ class MonaAuth(Base):
     def request_access_token(self):
         return requests.request(
             "POST",
-            # todo just make sure that we the correct value here
             self.auth_api_token_url,
             headers=BASIC_HEADER,
             json={"clientId": self.api_key, "secret": self.secret},
@@ -60,10 +59,9 @@ class MonaAuth(Base):
             "POST",
             self.refresh_token_url,
             headers=BASIC_HEADER,
-            # todo what is this weird usage of a dict all over the place
             json={
                 "refreshToken": get_token_info_by_api_key(
-                    self.api_key, REFRESH_TOKEN_KEY
+                    self.api_key, MONA_REFRESH_TOKEN_KEY
                 )
             },
         )

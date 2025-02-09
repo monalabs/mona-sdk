@@ -18,44 +18,18 @@ This module holds all authentication information and related functions. For a gi
 api_key, it can provide a new access token, refresh an expired access token or give
 authentication status information.
 """
-import os
 import time
-import datetime
 from threading import Lock
 
 from mona_sdk.logger import get_logger
 from requests.models import Response
 from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth.auth_globals import (
-    ERRORS,
-    ACCESS_TOKEN,
-    TIME_TO_REFRESH_INTERNAL_KEY,
-    IS_AUTHENTICATED,
-    SHOULD_USE_NO_AUTH_MODE,
-    SHOULD_USE_REFRESH_TOKENS,
-)
-from mona_sdk.auth.auth_requests import (
-    BASIC_HEADER,
+    ERRORS_INTERNAL_KEY,
 )
 from mona_sdk.client_exceptions import MonaAuthenticationException
 
-# As of 29/1/2025, a new token expires after 4 hours. REFRESH_TOKEN_SAFETY_MARGIN is the
-# safety gap of time to refresh the token before it expires (i.e. - in case
-# REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
-# the client will automatically refresh the token to a new one).
-REFRESH_TOKEN_SAFETY_MARGIN_HOURS = datetime.timedelta(
-    minutes=int(
-        os.environ.get(
-            "MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN_HOURS",
-            # Backward compatibility.
-            os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 0.5),
-        )
-    )
-)
 
-OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
-OIDC_CLIENT_SECRET = os.environ.get("MONA_SDK_OIDC_CLIENT_SECRET")
-OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the
@@ -67,18 +41,16 @@ API_KEYS_TO_TOKEN_DATA = {}
 authentication_lock = Lock()
 
 
-def _get_error_string_from_token_info(api_key):
-    error_list = get_token_info_by_api_key(api_key, ERRORS)
-    return ", ".join(get_token_info_by_api_key(api_key, ERRORS)) if error_list else ""
+def get_error_string_from_token_info(api_key):
+    error_list = get_token_info_by_api_key(api_key, ERRORS_INTERNAL_KEY)
+    return (
+        ", ".join(get_token_info_by_api_key(api_key, ERRORS_INTERNAL_KEY))
+        if error_list
+        else ""
+    )
 
 
-# todo currently refactoring this guy.
-# todo don't think that we should use the scope here
-
-
-
-
-def _get_auth_response_with_retries(
+def get_auth_response_with_retries(
     response_generator,
     num_of_retries,
     auth_wait_time_sec,
@@ -149,34 +121,6 @@ def get_token_info_by_api_key(api_key, token_data_arg):
     return API_KEYS_TO_TOKEN_DATA.get(api_key, {}).get(token_data_arg)
 
 
-# todo so we'll remove this soon?
-def is_authenticated(api_key):
-    """
-    :return: True if Mona's client holds a valid token and can communicate with Mona's
-    servers (or can refresh the token in order to), False otherwise.
-    """
-    return get_token_info_by_api_key(api_key, IS_AUTHENTICATED)
-
-
-# todo this is general auth - make sure that others also make sense here
-def _calculate_time_to_refresh(api_key, expires_key):
-    """
-    Calculates the time the access token needs to be refreshed and updates the relevant
-    api_key token data.
-    """
-    if not is_authenticated(api_key):
-        return None
-
-    token_expires = datetime.datetime.now() + datetime.timedelta(
-        seconds=get_token_info_by_api_key(
-            api_key,
-            token_data_arg=expires_key,
-        )
-    )
-
-    return token_expires - REFRESH_TOKEN_SAFETY_MARGIN_HOURS
-
-
 def handle_authentications_error(
     error_message, should_raise_exception, message_to_log=None
 ):
@@ -191,11 +135,5 @@ def handle_authentications_error(
 
     if should_raise_exception:
         raise MonaAuthenticationException(error_message)
+
     return get_dict_result(False, None, error_message)
-
-
-
-
-
-
-

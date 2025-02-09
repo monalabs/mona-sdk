@@ -21,9 +21,6 @@ from typing import List
 
 import requests
 from cachetools import TTLCache, cached
-from mona_sdk.auth.auth_utils import (
-    is_authenticated,
-)
 from mona_sdk.auth.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
 from mona_sdk.auth.get_authenticator import get_authenticator
 from mona_sdk.logger import get_logger
@@ -54,7 +51,11 @@ from mona_sdk.client_util import (
 
 from mona_sdk.auth.auth_globals import (
     SHOULD_USE_NO_AUTH_MODE,
-    MANUAL_TOKEN_STRING_FOR_API_KEY,
+    MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
+    DEFAULT_AUTH_MODE,
+    OIDC_SCOPE,
+    SHOULD_USE_REFRESH_TOKENS,
+    ACCESS_TOKEN,
 )
 from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
@@ -158,7 +159,8 @@ class Client:
         # TODO(elie): Make sure with Nemo that nobody uses this, otherwise we break
         #   users that use it.
         # todo am I changing a client default here? make sure that I don't ruin anything.
-        should_use_authentication=True,
+        should_use_authentication=None,
+        auth_mode=DEFAULT_AUTH_MODE,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
@@ -171,10 +173,11 @@ class Client:
         # todo double check if this works with what asaf did there.
         # todo will have to figure out by ourselves in which mode we
         #   are in - not sure about this - think how do we want to tackle this.
-        access_token=None,
-        oidc_scope=None,
+        access_token=ACCESS_TOKEN,
+        oidc_scope=OIDC_SCOPE,
         auth_api_token_url=AUTH_API_TOKEN_URL,
-        refresh_token_url=REFRESH_TOKEN_URL
+        refresh_token_url=REFRESH_TOKEN_URL,
+        should_use_refresh_tokens=SHOULD_USE_REFRESH_TOKENS
         # todo think if I'm adding in the right place (in terms of positions)
         # also how to deduct this from other envs.
     ):
@@ -198,9 +201,12 @@ class Client:
         self._logger = get_logger()
 
         # todo we need to change that obviously
-        self.api_key = 666 if not access_token else MANUAL_TOKEN_STRING_FOR_API_KEY
+        self.api_key = (
+            666 if not access_token else MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY
+        )
+
+        # todo is this needed here?
         self.secret = secret
-        self.oidc_scope = oidc_scope
 
         self._override_rest_api_host = override_rest_api_host
         self._override_rest_api_full_url = override_rest_api_full_url
@@ -227,7 +233,8 @@ class Client:
             user_id=user_id,
             secret=secret,
             access_token=access_token,
-            should_use_authentication=should_use_authentication,
+            # todo we ignore it in the client.
+            # should_use_authentication=should_use_authentication,
             override_rest_api_full_url=override_rest_api_full_url,
             override_rest_api_host=override_rest_api_host,
             override_app_server_host=override_app_server_host,
@@ -237,6 +244,9 @@ class Client:
             num_of_retries_for_authentication=num_of_retries_for_authentication,
             wait_time_for_authentication_retries=wait_time_for_authentication_retries,
             raise_authentication_exceptions=raise_authentication_exceptions,
+            auth_mode=auth_mode,
+            should_use_refresh_tokens=should_use_refresh_tokens,
+            oidc_scope=oidc_scope,
         )
 
         # todo I think that we don't really need those here
@@ -288,7 +298,9 @@ class Client:
         host_name = (
             self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
         )
-        endpoint_name = "monaExport" if SHOULD_USE_NO_AUTH_MODE else "export"
+        endpoint_name = (
+            "export" if self.authenticator.is_authentication_used() else "monaExport"
+        )
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
     def _get_app_server_url(self):
@@ -299,17 +311,6 @@ class Client:
         host_name = self._override_rest_api_host or f"api{self._user_id}.monalabs.io"
 
         return f"{http_protocol}://{host_name}"
-
-    def is_active(self):
-        """
-        Returns True if the client is authenticated (or able to re-authenticate when
-        needed) and therefore can export messages, otherwise returns False, meaning the
-        client cannot export data to Mona's servers.
-
-        Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
-        is set to False.
-        """
-        return True if SHOULD_USE_NO_AUTH_MODE else is_authenticated(self.api_key)
 
     def _should_filter_none_fields(self, filter_none_fields):
         """
@@ -470,7 +471,7 @@ class Client:
         if client_response["failed"] > 0:
             handle_export_error(
                 f"Some messages didn't pass validation: {client_response}."
-                f"{Client._get_unauthenticated_mode_error_message()}",
+                f"{self.authenticator.get_unauthenticated_mode_error_message()}",
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
@@ -578,7 +579,7 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
-        if not author and SHOULD_USE_NO_AUTH_MODE:
+        if not author and not self.authenticator.is_authentication_used():
             return self._handle_service_error(
                 "When using non authenticated client, author must be provided. "
             )
@@ -1105,21 +1106,12 @@ class Client:
         Logs an error and raises MonaServiceException if RAISE_SERVICE_EXCEPTIONS is
         true, returns false otherwise.
         """
-        error_message += Client._get_unauthenticated_mode_error_message()
+        error_message += self.authenticator.get_unauthenticated_mode_error_message()
 
         self._logger.error(error_message)
         if self.raise_service_exceptions:
             raise MonaServiceException(error_message)
         return get_dict_result(False, None, error_message)
-
-    # todo think where do I put this thing
-    @staticmethod
-    def _get_unauthenticated_mode_error_message():
-        """
-        If AUTH_MODE=NO_AUTH_MODE return an error message (suggesting
-        this might be the cause for the exception), and an empty string otherwise.
-        """
-        return UNAUTHENTICATED_CHECK_ERROR_MESSAGE if SHOULD_USE_NO_AUTH_MODE else ""
 
     def _default_bad_response_handler(self, json_response, status_code):
         if (
@@ -1144,11 +1136,7 @@ class Client:
         try:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
-                headers=self.authenticator.get_auth_header(
-                    # todo think about this change - aren't we're taking some ability that we had before? - this is important
-                    # self.api_key,
-                    # self.authenticator.api_key,
-                ),
+                headers=self.authenticator.get_auth_header(),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.
                 json=(remove_items_by_value(data, UNPROVIDED_VALUE) if data else {}),

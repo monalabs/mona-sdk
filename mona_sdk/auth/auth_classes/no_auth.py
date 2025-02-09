@@ -1,4 +1,5 @@
 from mona_sdk.auth.auth_classes.base_auth import Base
+from mona_sdk.messages import UNAUTHENTICATED_CHECK_ERROR_MESSAGE
 
 
 class NoAuth(Base):
@@ -16,3 +17,12 @@ class NoAuth(Base):
 
     def should_refresh_token(self):
         return False
+
+    @staticmethod
+    def get_unauthenticated_mode_error_message():
+        return UNAUTHENTICATED_CHECK_ERROR_MESSAGE
+
+    def is_authentication_used(self):
+        return False
+
+

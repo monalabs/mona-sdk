@@ -14,11 +14,14 @@ from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class OidcAuth(Base):
-    # todo maybe shouldn't support this thing with args at all?
-    def __init__(self, api_key, *args, oidc_scope=None, **kwargs):
-        super().__init__(api_key, *args, **kwargs)
+    def __init__(self, *args, api_key, oidc_scope=None, **kwargs):
+        super().__init__(*args, api_key, **kwargs)
         self.oidc_scope = oidc_scope
         self.expires_key = EXPIRES_KEY_IN_OIDC
+
+        # TODO(elie): Support using refresh tokens, as opposed to authenticating again
+        #   in OIDC.
+        self.should_use_refresh_tokens = False
 
     def _raise_if_missing_params(self):
         if not self.user_id:
@@ -45,11 +48,6 @@ class OidcAuth(Base):
                 "Please provide auth_api_token_url, api_key and secret."
             )
 
-    # todo interesting how to implement this
-    @abstractmethod
-    def refresh_token(self):
-        pass
-
     def request_access_token(self):
         data_kwargs = {
             "client_id": self.api_key,
@@ -57,20 +55,15 @@ class OidcAuth(Base):
             "grant_type": CLIENT_CREDENTIALS_GRANT_TYPE,
         }
 
-        # todo make sure we pass this somewhere
         if self.oidc_scope:
             data_kwargs["scope"] = self.oidc_scope
 
         return requests.request(
             "POST",
-            # todo think where is this going to come from
             self.auth_api_token_url,
             headers=URLENCODED_HEADER,
             data={**data_kwargs},
         )
-
-    # todo this is not the right place here.
-    # TODO(elie): Support refresh tokens in OIDC.
 
     def get_auth_header(self):
         token = get_current_token_by_api_key(

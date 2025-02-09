@@ -51,9 +51,10 @@ class Decorators(object):
                             return handle_authentications_error(
                                 f"Could not refresh token: "
                                 f"{refresh_token_response.text}",
-                                # todo this shouldn't be here as well
-                                mona_client.raise_auth_exceptions,
-                                message_to_log,
+                                should_raise_exception=(
+                                    mona_client.authenticator.raise_auth_exceptions
+                                ),
+                                message_to_log=message_to_log,
                             )
 
             return decorated(*args, **kwargs)

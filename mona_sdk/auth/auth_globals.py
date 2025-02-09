@@ -1,8 +1,8 @@
+import datetime
+import os
 from os import environ
 
 from mona_sdk.client_util import get_boolean_value_for_env_var
-
-ERRORS = "errors"
 
 EXPIRES_KEY_IN_MONA = "expiresIn"
 EXPIRES_KEY_IN_OIDC = "expires_in"
@@ -11,26 +11,29 @@ OIDC_ACCESS_TOKEN_KEY = "access_token"
 MONA_ACCESS_TOKEN_KEY = "accessToken"
 MANUAL_ACCESS_TOKEN_KEY = "accessToken"
 
-REFRESH_TOKEN_KEY = "refreshToken"
+MONA_REFRESH_TOKEN_KEY = "refreshToken"
+
+ERRORS_INTERNAL_KEY = "errors"
 TIME_TO_REFRESH_INTERNAL_KEY = "timeToRefresh"
+IS_AUTHENTICATED_INTERNAL_KEY = "isAuthenticated"
+MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY = "manual_token_mode"
 
-IS_AUTHENTICATED = "isAuthenticated"
-
-MANUAL_TOKEN_STRING_FOR_API_KEY = "manual_token_mode"
-
-# todo we'll need to remove usages of the old way of doing this.
 OIDC_AUTH_MODE = "OIDC"
 MONA_AUTH_MODE = "MONA"
 MANUAL_TOKEN_AUTH_MODE = "MANUAL_TOKEN"
 NO_AUTH_MODE = "NO_AUTH"
 
-AUTH_MODES_WITH_USER_ID = {MONA_AUTH_MODE}
+
+# This is currently relevant only to the "Mona" auth mode.
+SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
+    "MONA_SDK_USE_REFRESH_TOKENS", True
+)
 
 SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
 )
 
-# Mona unless old switch of no-authentication is on.
+# Use the "Mona" auth mode by default, unless the old switch of no-authentication is on.
 DEFAULT_AUTH_MODE = (
     NO_AUTH_MODE
     if not SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE
@@ -42,29 +45,26 @@ AUTH_MODE = environ.get(
     DEFAULT_AUTH_MODE,
 )
 
-# todo no use
-SHOULD_USE_NO_AUTH_MODE = AUTH_MODE == NO_AUTH_MODE
-
-SHOULD_USE_MANUAL_AUTH_MODE = AUTH_MODE == MANUAL_TOKEN_AUTH_MODE
-
-AUTH_MODE_TO_USE_REFRESH_TOKENS_DEFAULT = {
-    MONA_AUTH_MODE: True,
-    OIDC_AUTH_MODE: False,
-}
-USE_REFRESH_TOKENS_DEFAULT = AUTH_MODE_TO_USE_REFRESH_TOKENS_DEFAULT[AUTH_MODE]
-SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
-    "MONA_SDK_USE_REFRESH_TOKENS", USE_REFRESH_TOKENS_DEFAULT
+# As of 29/1/2025, a new token expires after 4 hours. REFRESH_TOKEN_SAFETY_MARGIN is the
+# safety gap of time to refresh the token before it expires (i.e. - in case
+# REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
+# the client will automatically refresh the token to a new one).
+REFRESH_TOKEN_SAFETY_MARGIN_HOURS = datetime.timedelta(
+    minutes=int(
+        os.environ.get(
+            "MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN_HOURS",
+            # Backward compatibility.
+            os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 0.5),
+        )
+    )
 )
 
-# todo make sure that we break down those
-AUTH_MODE_TO_ACCESS_TOKEN_STRING = {
-    MONA_AUTH_MODE: MONA_ACCESS_TOKEN_KEY,
-    OIDC_AUTH_MODE: OIDC_ACCESS_TOKEN_KEY,
-}
-ACCESS_TOKEN = AUTH_MODE_TO_ACCESS_TOKEN_STRING[AUTH_MODE]
+OIDC_CLIENT_ID = os.environ.get("MONA_SDK_OIDC_CLIENT_ID")
+OIDC_CLIENT_SECRET = os.environ.get("MONA_SDK_OIDC_CLIENT_SECRET")
+OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
 
-AUTH_MODE_TO_EXPIRES_KEY = {
-    MONA_AUTH_MODE: EXPIRES_KEY_IN_MONA,
-    OIDC_AUTH_MODE: EXPIRES_KEY_IN_OIDC,
-}
-EXPIRES_KEY = AUTH_MODE_TO_EXPIRES_KEY[AUTH_MODE]
+ACCESS_TOKEN = os.environ.get("MONA_SDK_ACCESS_TOKEN")
+
+SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
+    "MONA_SDK_SHOULD_USE_REFRESH_TOKENS", True
+)

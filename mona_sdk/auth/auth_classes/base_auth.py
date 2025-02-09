@@ -5,16 +5,15 @@ from mona_sdk.auth.auth_requests import BASIC_HEADER
 from mona_sdk.auth.auth_utils import (
     authentication_lock,
     API_KEYS_TO_TOKEN_DATA,
-    _calculate_time_to_refresh,
     handle_authentications_error,
-    _get_error_string_from_token_info,
-    _get_auth_response_with_retries,
+    get_error_string_from_token_info,
+    get_auth_response_with_retries,
     get_token_info_by_api_key,
 )
 from mona_sdk.auth.auth_globals import (
-    IS_AUTHENTICATED,
+    IS_AUTHENTICATED_INTERNAL_KEY,
     TIME_TO_REFRESH_INTERNAL_KEY,
-    SHOULD_USE_REFRESH_TOKENS,
+    REFRESH_TOKEN_SAFETY_MARGIN_HOURS,
 )
 from mona_sdk.logger import get_logger
 
@@ -35,6 +34,7 @@ class Base:
         override_app_server_full_url=None,
         override_rest_api_host=None,
         override_rest_api_full_url=None,
+        should_use_refresh_tokens=False,
     ):
         self.api_key = api_key
         self.secret = secret
@@ -48,10 +48,12 @@ class Base:
         self.override_rest_api_host = override_rest_api_host
         self.override_rest_api_full_url = override_rest_api_full_url
         self.auth_api_token_url = auth_api_token_url
-        self.refresh_token_url=refresh_token_url
+        self.refresh_token_url = refresh_token_url
+        self.should_use_refresh_tokens = should_use_refresh_tokens
 
         # Will be overwritten in the child which are going to use this property.
         self.expires_key = None
+
         self._raise_if_missing_params()
 
     @abstractmethod
@@ -64,26 +66,20 @@ class Base:
             # new token. That token will be shared between all instances that share an
             # api_key.
 
-            # todo figure out where are we brining this from.
             with authentication_lock:
                 # The inner check is needed to avoid multiple redundant authentications.
-                # todo what about making this private?
-                # todo what about moving this file from places?
                 if not self.is_authenticated():
 
-                    # todo we need to work on this function here.
                     response = self._request_access_token_with_retries()
                     API_KEYS_TO_TOKEN_DATA[self.api_key] = response.json()
 
                     # response.ok will be True if authentication was successful and
                     # false if not.
-                    API_KEYS_TO_TOKEN_DATA[self.api_key][IS_AUTHENTICATED] = response.ok
+                    API_KEYS_TO_TOKEN_DATA[self.api_key][
+                        IS_AUTHENTICATED_INTERNAL_KEY
+                    ] = response.ok
 
-                    time_to_refresh = _calculate_time_to_refresh(
-                        # todo not sure how we should treat this.
-                        self.api_key,
-                        expires_key=self.expires_key,
-                    )
+                    time_to_refresh = self.calculate_time_to_refresh()
                     if time_to_refresh:
                         API_KEYS_TO_TOKEN_DATA[self.api_key][
                             TIME_TO_REFRESH_INTERNAL_KEY
@@ -100,15 +96,12 @@ class Base:
             # Failure
             return handle_authentications_error(
                 f"Mona's client could not authenticate. "
-                f"errors: {_get_error_string_from_token_info(self.api_key)}",
-                # todo make sure that this is passed like it should.
+                f"errors: {get_error_string_from_token_info(self.api_key)}",
                 should_raise_exception=self.raise_auth_exceptions,
             )
 
-    # todo when we use strings  there, we might lose some ability
-    #   think about that./
     def is_authenticated(self):
-        return get_token_info_by_api_key(self.api_key, IS_AUTHENTICATED)
+        return get_token_info_by_api_key(self.api_key, IS_AUTHENTICATED_INTERNAL_KEY)
 
     def request_access_token(self):
         raise NotImplementedError
@@ -116,16 +109,15 @@ class Base:
     def request_refresh_token(self):
         raise NotImplementedError
 
-    # todo what about using this if there is no success in the first one?
     def _request_access_token_with_retries(self):
-        return _get_auth_response_with_retries(
+        return get_auth_response_with_retries(
             lambda: self.request_access_token(),
             num_of_retries=self.num_of_retries,
             auth_wait_time_sec=self.auth_wait_time_sec,
         )
 
     def _request_refresh_token_with_retries(self):
-        return _get_auth_response_with_retries(
+        return get_auth_response_with_retries(
             lambda: self.request_refresh_token(),
             num_of_retries=self.num_of_retries,
             auth_wait_time_sec=self.auth_wait_time_sec,
@@ -146,12 +138,14 @@ class Base:
         # Update the client's new token info.
         API_KEYS_TO_TOKEN_DATA[self.api_key] = response.json()
 
-        API_KEYS_TO_TOKEN_DATA[self.api_key][IS_AUTHENTICATED] = True
+        API_KEYS_TO_TOKEN_DATA[self.api_key][IS_AUTHENTICATED_INTERNAL_KEY] = True
 
-        time_to_refresh = _calculate_time_to_refresh(self.api_key, self.expires_key)
+        time_to_refresh = self.calculate_time_to_refresh()
 
         if time_to_refresh:
-            API_KEYS_TO_TOKEN_DATA[self.api_key][TIME_TO_REFRESH_INTERNAL_KEY] = time_to_refresh
+            API_KEYS_TO_TOKEN_DATA[self.api_key][
+                TIME_TO_REFRESH_INTERNAL_KEY
+            ] = time_to_refresh
 
         get_logger().info(
             f"Refreshed access token, the new token info:"
@@ -162,10 +156,8 @@ class Base:
 
     def _get_refresh_token_with_fallback(self):
 
-        # TODO(elie): Support refresh tokens for OIDC.
-        # todo move this env to become a normal one - it's not even that
-        #   every class should have the information.
-        if not SHOULD_USE_REFRESH_TOKENS:
+
+        if not self.should_use_refresh_tokens:
             return self._request_access_token_with_retries()
 
         response = self._request_refresh_token_with_retries()
@@ -181,17 +173,35 @@ class Base:
 
         return response
 
-# todo just thinking about how to determine in which auth mode we are
-
     def should_refresh_token(self):
         return (
-                get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
-                < datetime.datetime.now()
+            get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
+            < datetime.datetime.now()
         )
-
-     # tood make sure I kill this env
-     #        if SHOULD_USE_NO_AUTH_MODE
 
     def get_auth_header(self):
         return BASIC_HEADER
 
+    def calculate_time_to_refresh(self):
+        """
+        Calculates the time the access token needs to be refreshed and updates the
+        relevant api_key token data.
+        """
+        if not self.is_authenticated():
+            return None
+
+        token_expires = datetime.datetime.now() + datetime.timedelta(
+            seconds=get_token_info_by_api_key(
+                self.api_key,
+                token_data_arg=self.expires_key,
+            )
+        )
+
+        return token_expires - REFRESH_TOKEN_SAFETY_MARGIN_HOURS
+
+    @staticmethod
+    def get_unauthenticated_mode_error_message():
+        return ""
+
+    def is_authentication_used(self):
+        return True
