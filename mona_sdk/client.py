@@ -28,7 +28,6 @@ from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
     APP_SERVER_CONNECTION_ERROR_MESSAGE,
     CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
-    UNAUTHENTICATED_CHECK_ERROR_MESSAGE,
     RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
 from mona_sdk.validation import (
@@ -50,12 +49,10 @@ from mona_sdk.client_util import (
 
 
 from mona_sdk.auth.auth_globals import (
-    SHOULD_USE_NO_AUTH_MODE,
-    MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
-    DEFAULT_AUTH_MODE,
     OIDC_SCOPE,
     SHOULD_USE_REFRESH_TOKENS,
-    ACCESS_TOKEN,
+    ACCESS_TOKEN, USER_ID, API_KEY, SECRET,
+    SHOULD_USE_AUTHENTICATION, AUTH_MODE,
 )
 from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
@@ -147,8 +144,8 @@ class Client:
 
     def __init__(
         self,
-        api_key=None,
-        secret=None,
+        api_key=API_KEY,
+        secret=SECRET,
         raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
         raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
         raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
@@ -156,35 +153,26 @@ class Client:
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
-        # TODO(elie): Make sure with Nemo that nobody uses this, otherwise we break
-        #   users that use it.
-        # todo am I changing a client default here? make sure that I don't ruin anything.
-        should_use_authentication=None,
-        auth_mode=DEFAULT_AUTH_MODE,
+        # "auth_mode" should be used instead of "should_use_authentication" - leaving
+        # this for backward compatibility.
+        should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        auth_mode=AUTH_MODE,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
         override_app_server_full_url=OVERRIDE_APP_SERVER_URL,
-        user_id=None,
+        user_id=USER_ID,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
-        # todo double check if this works with what asaf did there.
-        # todo will have to figure out by ourselves in which mode we
-        #   are in - not sure about this - think how do we want to tackle this.
         access_token=ACCESS_TOKEN,
         oidc_scope=OIDC_SCOPE,
         auth_api_token_url=AUTH_API_TOKEN_URL,
         refresh_token_url=REFRESH_TOKEN_URL,
         should_use_refresh_tokens=SHOULD_USE_REFRESH_TOKENS
-        # todo think if I'm adding in the right place (in terms of positions)
-        # also how to deduct this from other envs.
     ):
 
-        # todo consider returning something a class here?
-
-        # todo adjust the param here.
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
@@ -200,14 +188,6 @@ class Client:
 
         self._logger = get_logger()
 
-        # todo we need to change that obviously
-        self.api_key = (
-            666 if not access_token else MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY
-        )
-
-        # todo is this needed here?
-        self.secret = secret
-
         self._override_rest_api_host = override_rest_api_host
         self._override_rest_api_full_url = override_rest_api_full_url
 
@@ -219,22 +199,12 @@ class Client:
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
 
-        # todo Nemo wants to use props for everything here.
-        # todo  let's start with just making this work for no auth mode first
-        #   this should be the easiest.
-
-        # todo I don't think that I need to use the self here, because the self is the
-        #   part of the authenticator.
-
-        # todo before I support the multi purpose authenticator - let's
-        #   makes sure that we are ok with everything else here.
         self.authenticator = get_authenticator(
             api_key=api_key,
             user_id=user_id,
             secret=secret,
             access_token=access_token,
-            # todo we ignore it in the client.
-            # should_use_authentication=should_use_authentication,
+            should_use_authentication=should_use_authentication,
             override_rest_api_full_url=override_rest_api_full_url,
             override_rest_api_host=override_rest_api_host,
             override_app_server_host=override_app_server_host,
@@ -248,13 +218,6 @@ class Client:
             should_use_refresh_tokens=should_use_refresh_tokens,
             oidc_scope=oidc_scope,
         )
-
-        # todo I think that we don't really need those here
-        # self.raise_authentication_exceptions = raise_authentication_exceptions
-        # self.num_of_retries_for_authentication = num_of_retries_for_authentication
-        # self.wait_time_for_authentication_retries = (
-        #     wait_time_for_authentication_retries
-        # )
 
         could_auth = self.authenticator.initial_auth()
         if not could_auth:
@@ -486,7 +449,6 @@ class Client:
 
         return client_response
 
-    # todo also make sure that you fix this
     def _send_mona_rest_api_request(
         self, messages, default_action=None, sample_config_name=None
     ):
@@ -593,7 +555,7 @@ class Client:
 
         config_to_upload = {
             "config": {self._user_id: config},
-            "author": author or self.api_key,
+            "author": author or self.authenticator.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }

@@ -1,5 +1,3 @@
-import datetime
-
 import jwt
 import requests
 
@@ -10,14 +8,11 @@ from mona_sdk.auth.auth_utils import (
 from mona_sdk.auth.auth_globals import (
     EXPIRES_KEY_IN_MONA,
     MONA_REFRESH_TOKEN_KEY,
-    SHOULD_USE_REFRESH_TOKENS,
-    TIME_TO_REFRESH_INTERNAL_KEY,
     MONA_ACCESS_TOKEN_KEY,
 )
 from mona_sdk.auth.auth_requests import BASIC_HEADER
 from mona_sdk.auth.auth_classes.base_auth import Base
 from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.logger import get_logger
 
 
 class MonaAuth(Base):

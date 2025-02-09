@@ -29,20 +29,13 @@ SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
     "MONA_SDK_USE_REFRESH_TOKENS", True
 )
 
-SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE = get_boolean_value_for_env_var(
+SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
     "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
-)
-
-# Use the "Mona" auth mode by default, unless the old switch of no-authentication is on.
-DEFAULT_AUTH_MODE = (
-    NO_AUTH_MODE
-    if not SHOULD_USE_AUTHENTICATION_BACKWARD_COMPATIBLE
-    else MONA_AUTH_MODE
 )
 
 AUTH_MODE = environ.get(
     "AUTH_MODE",
-    DEFAULT_AUTH_MODE,
+    MONA_AUTH_MODE,
 )
 
 # As of 29/1/2025, a new token expires after 4 hours. REFRESH_TOKEN_SAFETY_MARGIN is the
@@ -65,6 +58,6 @@ OIDC_SCOPE = os.environ.get("MONA_SDK_OIDC_SCOPE")
 
 ACCESS_TOKEN = os.environ.get("MONA_SDK_ACCESS_TOKEN")
 
-SHOULD_USE_REFRESH_TOKENS = get_boolean_value_for_env_var(
-    "MONA_SDK_SHOULD_USE_REFRESH_TOKENS", True
-)
+API_KEY = os.environ.get("MONA_SDK_API_KEY")
+SECRET = os.environ.get("MONA_SDK_SECRET")
+USER_ID = os.environ.get("MONA_SDK_USER_ID")

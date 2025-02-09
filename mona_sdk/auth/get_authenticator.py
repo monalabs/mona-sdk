@@ -18,5 +18,9 @@ AUTH_MODE_TO_AUTHENTICATOR_CLASS = {
 }
 
 
-def get_authenticator(auth_mode, **kwargs):
+def get_authenticator(auth_mode, should_use_authentication, **kwargs):
+    # For backward compatibility.
+    if not should_use_authentication:
+        return NoAuth(**kwargs)
+
     return AUTH_MODE_TO_AUTHENTICATOR_CLASS[auth_mode](**kwargs)

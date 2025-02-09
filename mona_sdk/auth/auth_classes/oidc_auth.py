@@ -1,15 +1,13 @@
-import datetime
-from abc import abstractmethod
-
 import requests
 
-from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, \
-    TIME_TO_REFRESH_INTERNAL_KEY, OIDC_ACCESS_TOKEN_KEY
-from mona_sdk.auth.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, \
-    URLENCODED_HEADER, BASIC_HEADER
+from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, OIDC_ACCESS_TOKEN_KEY
+from mona_sdk.auth.auth_requests import (
+    CLIENT_CREDENTIALS_GRANT_TYPE,
+    URLENCODED_HEADER,
+    BASIC_HEADER,
+)
 from mona_sdk.auth.auth_classes.base_auth import Base
-from mona_sdk.auth.auth_utils import get_token_info_by_api_key, \
-    get_current_token_by_api_key
+from mona_sdk.auth.auth_utils import get_current_token_by_api_key
 from mona_sdk.client_exceptions import MonaInitializationException
 
 
@@ -30,17 +28,16 @@ class OidcAuth(Base):
             )
 
         if (
-                not self.override_rest_api_host
-                and not self.override_rest_api_full_url
-                and not self.override_app_server_host
-                and not self.override_app_server_full_url
+            not self.override_rest_api_host
+            and not self.override_rest_api_full_url
+            and not self.override_app_server_host
+            and not self.override_app_server_full_url
         ):
             raise MonaInitializationException(
                 "Mona client is initiated with an "
                 "auth mode the requires a host or a "
                 "full url."
             )
-
 
         if not self.auth_api_token_url or not self.api_key or not self.secret:
             raise MonaInitializationException(
@@ -74,4 +71,3 @@ class OidcAuth(Base):
             **BASIC_HEADER,
             "Authorization": f"Bearer {token}",
         }
-
