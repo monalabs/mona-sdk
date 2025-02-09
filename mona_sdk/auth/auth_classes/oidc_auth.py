@@ -1,10 +1,12 @@
+import datetime
 from abc import abstractmethod
 
 import requests
 
-from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC
+from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, TIME_TO_REFRESH_INTERNAL_KEY
 from mona_sdk.auth.auth_requests import CLIENT_CREDENTIALS_GRANT_TYPE, URLENCODED_HEADER
 from mona_sdk.auth.auth_classes.base_auth import Base
+from mona_sdk.auth.auth_utils import get_token_info_by_api_key
 from mona_sdk.client_exceptions import MonaInitializationException
 
 
@@ -63,3 +65,6 @@ class OidcAuth(Base):
             headers=URLENCODED_HEADER,
             data={**data_kwargs},
         )
+
+    # todo this is not the right place here.
+    # TODO(elie): Support refresh tokens in OIDC.

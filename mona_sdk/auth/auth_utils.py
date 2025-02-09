@@ -29,7 +29,7 @@ from mona_sdk.client_util import get_dict_result
 from mona_sdk.auth.auth_globals import (
     ERRORS,
     ACCESS_TOKEN,
-    TIME_TO_REFRESH,
+    TIME_TO_REFRESH_INTERNAL_KEY,
     IS_AUTHENTICATED,
     SHOULD_USE_NO_AUTH_MODE,
     SHOULD_USE_REFRESH_TOKENS,
@@ -193,22 +193,6 @@ def handle_authentications_error(
         raise MonaAuthenticationException(error_message)
     return get_dict_result(False, None, error_message)
 
-
-# todo remove since this is not in use
-def should_refresh_token(mona_client):
-    """
-    :return: True if the token has expired, or is about to expire in
-    REFRESH_TOKEN_SAFETY_MARGIN hours or less, False otherwise.
-    """
-
-    if SHOULD_USE_REFRESH_TOKENS:
-        get_logger().info("Not refreshing token")
-        return False
-
-    return (
-            get_token_info_by_api_key(mona_client.api_key, TIME_TO_REFRESH)
-            < datetime.datetime.now()
-    )
 
 
 

@@ -1,3 +1,4 @@
+import datetime
 from abc import abstractmethod
 
 from mona_sdk.auth.auth_utils import (
@@ -11,7 +12,7 @@ from mona_sdk.auth.auth_utils import (
 )
 from mona_sdk.auth.auth_globals import (
     IS_AUTHENTICATED,
-    TIME_TO_REFRESH,
+    TIME_TO_REFRESH_INTERNAL_KEY,
     SHOULD_USE_REFRESH_TOKENS,
 )
 from mona_sdk.logger import get_logger
@@ -84,7 +85,7 @@ class Base:
                     )
                     if time_to_refresh:
                         API_KEYS_TO_TOKEN_DATA[self.api_key][
-                            TIME_TO_REFRESH
+                            TIME_TO_REFRESH_INTERNAL_KEY
                         ] = time_to_refresh
 
         if self.is_authenticated():
@@ -149,7 +150,7 @@ class Base:
         time_to_refresh = _calculate_time_to_refresh(self.api_key, self.expires_key)
 
         if time_to_refresh:
-            API_KEYS_TO_TOKEN_DATA[self.api_key][TIME_TO_REFRESH] = time_to_refresh
+            API_KEYS_TO_TOKEN_DATA[self.api_key][TIME_TO_REFRESH_INTERNAL_KEY] = time_to_refresh
 
         get_logger().info(
             f"Refreshed access token, the new token info:"
@@ -161,7 +162,8 @@ class Base:
     def _get_refresh_token_with_fallback(self):
 
         # TODO(elie): Support refresh tokens for OIDC.
-        # todo move this env to become a normal one
+        # todo move this env to become a normal one - it's not even that
+        #   every class should have the information.
         if not SHOULD_USE_REFRESH_TOKENS:
             return self._request_access_token_with_retries()
 
@@ -179,3 +181,9 @@ class Base:
         return response
 
 # todo just thinking about how to determine in which auth mode we are
+
+    def should_refresh_token(self):
+        return (
+                get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
+                < datetime.datetime.now()
+        )

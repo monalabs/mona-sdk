@@ -11,7 +11,7 @@ ACCESS_TOKEN_IN_OIDC = "access_token"
 ACCESS_TOKEN_IN_MONA = "accessToken"
 
 REFRESH_TOKEN_KEY = "refreshToken"
-TIME_TO_REFRESH = "timeToRefresh"
+TIME_TO_REFRESH_INTERNAL_KEY = "timeToRefresh"
 
 IS_AUTHENTICATED = "isAuthenticated"
 

@@ -46,7 +46,6 @@ class ManualTokenAuth(Base):
     def is_authenticated(self):
         return True
 
-    @staticmethod
-    def should_refresh_token():
+    def should_refresh_token(self):
         return False
 
