@@ -1,14 +1,13 @@
 import requests
-
+from mona_sdk.auth.auth_utils import get_current_token_by_api_key
 from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, OIDC_ACCESS_TOKEN_KEY
+from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.auth.auth_requests import (
-    CLIENT_CREDENTIALS_GRANT_TYPE,
-    URLENCODED_HEADER,
     BASIC_HEADER,
+    URLENCODED_HEADER,
+    CLIENT_CREDENTIALS_GRANT_TYPE,
 )
 from mona_sdk.auth.auth_classes.base_auth import Base
-from mona_sdk.auth.auth_utils import get_current_token_by_api_key
-from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class OidcAuth(Base):

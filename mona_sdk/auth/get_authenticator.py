@@ -1,14 +1,13 @@
 from mona_sdk.auth.auth_globals import (
+    NO_AUTH_MODE,
     MONA_AUTH_MODE,
     OIDC_AUTH_MODE,
     MANUAL_TOKEN_AUTH_MODE,
-    NO_AUTH_MODE,
 )
-from mona_sdk.auth.auth_classes.manual_token_auth import ManualTokenAuth
-from mona_sdk.auth.auth_classes.mona_auth import MonaAuth
 from mona_sdk.auth.auth_classes.no_auth import NoAuth
+from mona_sdk.auth.auth_classes.mona_auth import MonaAuth
 from mona_sdk.auth.auth_classes.oidc_auth import OidcAuth
-
+from mona_sdk.auth.auth_classes.manual_token_auth import ManualTokenAuth
 
 AUTH_MODE_TO_AUTHENTICATOR_CLASS = {
     MONA_AUTH_MODE: MonaAuth,

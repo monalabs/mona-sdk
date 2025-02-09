@@ -1,21 +1,21 @@
 import datetime
 from abc import abstractmethod
 
-from mona_sdk.auth.auth_requests import BASIC_HEADER
+from mona_sdk.logger import get_logger
 from mona_sdk.auth.auth_utils import (
-    authentication_lock,
     API_KEYS_TO_TOKEN_DATA,
-    handle_authentications_error,
-    get_error_string_from_token_info,
-    get_auth_response_with_retries,
+    authentication_lock,
     get_token_info_by_api_key,
+    handle_authentications_error,
+    get_auth_response_with_retries,
+    get_error_string_from_token_info,
 )
 from mona_sdk.auth.auth_globals import (
-    IS_AUTHENTICATED_INTERNAL_KEY,
     TIME_TO_REFRESH_INTERNAL_KEY,
+    IS_AUTHENTICATED_INTERNAL_KEY,
     REFRESH_TOKEN_SAFETY_MARGIN_HOURS,
 )
-from mona_sdk.logger import get_logger
+from mona_sdk.auth.auth_requests import BASIC_HEADER
 
 
 class Base:
@@ -35,6 +35,7 @@ class Base:
         override_rest_api_host=None,
         override_rest_api_full_url=None,
         should_use_refresh_tokens=False,
+        oidc_scope=None,
     ):
         self.api_key = api_key
         self.secret = secret
@@ -155,7 +156,6 @@ class Base:
         return response
 
     def _get_refresh_token_with_fallback(self):
-
 
         if not self.should_use_refresh_tokens:
             return self._request_access_token_with_retries()

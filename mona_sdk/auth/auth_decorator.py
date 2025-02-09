@@ -1,9 +1,6 @@
 from functools import wraps
 
-from mona_sdk.auth.auth_utils import (
-    authentication_lock,
-    handle_authentications_error,
-)
+from mona_sdk.auth.auth_utils import authentication_lock, handle_authentications_error
 
 
 class Decorators(object):

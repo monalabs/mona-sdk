@@ -1,5 +1,5 @@
-from mona_sdk.auth.auth_classes.base_auth import Base
 from mona_sdk.messages import UNAUTHENTICATED_CHECK_ERROR_MESSAGE
+from mona_sdk.auth.auth_classes.base_auth import Base
 
 
 class NoAuth(Base):
@@ -24,5 +24,3 @@ class NoAuth(Base):
 
     def is_authentication_used(self):
         return False
-
-

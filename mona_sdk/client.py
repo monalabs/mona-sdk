@@ -21,8 +21,6 @@ from typing import List
 
 import requests
 from cachetools import TTLCache, cached
-from mona_sdk.auth.auth_requests import AUTH_API_TOKEN_URL, REFRESH_TOKEN_URL
-from mona_sdk.auth.get_authenticator import get_authenticator
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -46,17 +44,21 @@ from mona_sdk.client_util import (
     get_boolean_value_for_env_var,
     ged_dict_with_filtered_out_none_values,
 )
-
-
 from mona_sdk.auth.auth_globals import (
+    SECRET,
+    API_KEY,
+    USER_ID,
+    AUTH_MODE,
     OIDC_SCOPE,
+    ACCESS_TOKEN,
+    SHOULD_USE_AUTHENTICATION,
     SHOULD_USE_REFRESH_TOKENS,
-    ACCESS_TOKEN, USER_ID, API_KEY, SECRET,
-    SHOULD_USE_AUTHENTICATION, AUTH_MODE,
 )
-from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+from mona_sdk.auth.auth_requests import REFRESH_TOKEN_URL, AUTH_API_TOKEN_URL
+from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.mona_single_message import MonaSingleMessage
+from mona_sdk.auth.get_authenticator import get_authenticator
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -170,7 +172,7 @@ class Client:
         oidc_scope=OIDC_SCOPE,
         auth_api_token_url=AUTH_API_TOKEN_URL,
         refresh_token_url=REFRESH_TOKEN_URL,
-        should_use_refresh_tokens=SHOULD_USE_REFRESH_TOKENS
+        should_use_refresh_tokens=SHOULD_USE_REFRESH_TOKENS,
     ):
 
         """

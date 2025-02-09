@@ -24,12 +24,8 @@ from threading import Lock
 from mona_sdk.logger import get_logger
 from requests.models import Response
 from mona_sdk.client_util import get_dict_result
-from mona_sdk.auth.auth_globals import (
-    ERRORS_INTERNAL_KEY,
-)
+from mona_sdk.auth.auth_globals import ERRORS_INTERNAL_KEY
 from mona_sdk.client_exceptions import MonaAuthenticationException
-
-
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
 # and its access token info (if the given api_key is authenticated it will contain the

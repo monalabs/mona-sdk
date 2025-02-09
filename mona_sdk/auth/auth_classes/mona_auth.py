@@ -1,18 +1,17 @@
 import jwt
 import requests
-
 from mona_sdk.auth.auth_utils import (
-    get_current_token_by_api_key,
     get_token_info_by_api_key,
+    get_current_token_by_api_key,
 )
 from mona_sdk.auth.auth_globals import (
     EXPIRES_KEY_IN_MONA,
-    MONA_REFRESH_TOKEN_KEY,
     MONA_ACCESS_TOKEN_KEY,
+    MONA_REFRESH_TOKEN_KEY,
 )
+from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.auth.auth_requests import BASIC_HEADER
 from mona_sdk.auth.auth_classes.base_auth import Base
-from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class MonaAuth(Base):

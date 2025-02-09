@@ -1,16 +1,16 @@
-from mona_sdk.auth.auth_requests import BASIC_HEADER
+from mona_sdk.logger import get_logger
 from mona_sdk.auth.auth_utils import (
     API_KEYS_TO_TOKEN_DATA,
     get_current_token_by_api_key,
 )
 from mona_sdk.auth.auth_globals import (
-    MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
-    IS_AUTHENTICATED_INTERNAL_KEY,
     MANUAL_ACCESS_TOKEN_KEY,
+    IS_AUTHENTICATED_INTERNAL_KEY,
+    MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
 )
-from mona_sdk.auth.auth_classes.base_auth import Base
 from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.logger import get_logger
+from mona_sdk.auth.auth_requests import BASIC_HEADER
+from mona_sdk.auth.auth_classes.base_auth import Base
 
 
 class ManualTokenAuth(Base):
