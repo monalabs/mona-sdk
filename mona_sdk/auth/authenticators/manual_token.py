@@ -9,14 +9,17 @@ from mona_sdk.auth.globals import (
     MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
     BASIC_HEADER,
 )
-from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.auth.authenticators.base import Base
+from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 
 
-class ManualTokenAuth(Base):
-    def __init__(self, user_id, *args, **kwargs):
-        super().__init__(*args, user_id=user_id, **kwargs)
+class ManualTokenAuth(BaseAuthenticator):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.api_key = MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY
+
+    @classmethod
+    def get_valid_keys(cls):
+        return super().get_valid_keys()
 
     def initial_auth(self):
         get_logger().info("Manual token mode is on.")

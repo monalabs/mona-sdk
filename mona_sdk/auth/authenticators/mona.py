@@ -9,14 +9,17 @@ from mona_sdk.auth.globals import (
     MONA_ACCESS_TOKEN_KEY,
     MONA_REFRESH_TOKEN_KEY, BASIC_HEADER,
 )
-from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.auth.authenticators.base import Base
+from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 
 
-class MonaAuth(Base):
+class MonaAuth(BaseAuthenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.expires_key = EXPIRES_KEY_IN_MONA
+
+    @classmethod
+    def get_valid_keys(cls):
+        return super().get_valid_keys()
 
     def _raise_if_missing_params(self):
         self._raise_if_missing_token_params()

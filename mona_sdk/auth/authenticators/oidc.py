@@ -8,10 +8,10 @@ from mona_sdk.auth.globals import (
     URL_ENCODED_HEADER,
 )
 from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.auth.authenticators.base import Base
+from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 
 
-class OidcAuth(Base):
+class OidcAuth(BaseAuthenticator):
     def __init__(self, *args, api_key, oidc_scope=None, **kwargs):
         super().__init__(*args, api_key, **kwargs)
         self.oidc_scope = oidc_scope
@@ -20,6 +20,10 @@ class OidcAuth(Base):
         # TODO(elie): Support using refresh tokens, as opposed to authenticating again
         #   in OIDC.
         self.should_use_refresh_tokens = False
+
+    @classmethod
+    def get_valid_keys(cls):
+        return super().get_valid_keys() + ["oidc_scope"]
 
     def _raise_if_missing_params(self):
 

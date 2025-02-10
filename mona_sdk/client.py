@@ -23,6 +23,10 @@ from typing import List
 import requests
 from cachetools import TTLCache, cached
 
+from mona_sdk.auth.authenticators.manual_token import ManualTokenAuth
+from mona_sdk.auth.authenticators.mona import MonaAuth
+from mona_sdk.auth.authenticators.no_auth import NoAuth
+from mona_sdk.auth.authenticators.oidc import OidcAuth
 from mona_sdk.auth.utils import handle_authentications_error, authentication_lock
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
@@ -57,11 +61,11 @@ from mona_sdk.auth.globals import (
     SHOULD_USE_AUTHENTICATION,
     SHOULD_USE_REFRESH_TOKENS,
     AUTH_API_TOKEN_URL,
-    REFRESH_TOKEN_URL,
+    REFRESH_TOKEN_URL, MONA_AUTH_MODE, MANUAL_TOKEN_AUTH_MODE, OIDC_AUTH_MODE,
+    NO_AUTH_MODE,
 )
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
-from mona_sdk.auth.get_authenticator import get_authenticator
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -141,6 +145,23 @@ CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
 
 
+AUTH_MODE_MAP = {
+        MONA_AUTH_MODE: MonaAuth,
+        OIDC_AUTH_MODE: OidcAuth,
+        MANUAL_TOKEN_AUTH_MODE: ManualTokenAuth,
+        NO_AUTH_MODE: NoAuth,
+    }
+
+
+def get_authenticator(auth_mode, should_use_authentication, **kwargs):
+
+    # For backward compatibility.
+    cls = AUTH_MODE_MAP[auth_mode if should_use_authentication else NO_AUTH_MODE]
+    valid_keys = cls.get_valid_keys()
+
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+    return cls(**filtered_kwargs)
+
 class Decorators(object):
     @classmethod
     def refresh_token_if_needed(cls, decorated):
@@ -195,6 +216,8 @@ class Decorators(object):
             return decorated(*args, **kwargs)
 
         return inner
+
+
 
 
 class Client:

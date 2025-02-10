@@ -19,7 +19,7 @@ from mona_sdk.auth.globals import (
 )
 
 
-class Base(ABC):
+class BaseAuthenticator(ABC):
     def __init__(
         self,
         api_key,
@@ -36,7 +36,6 @@ class Base(ABC):
         override_rest_api_host=None,
         override_rest_api_full_url=None,
         should_use_refresh_tokens=False,
-        oidc_scope=None,
     ):
         self.api_key = api_key
         self.secret = secret
@@ -57,6 +56,25 @@ class Base(ABC):
         self.expires_key = None
 
         self._raise_if_missing_params()
+
+    @classmethod
+    def get_valid_keys(cls):
+        return [
+            "api_key",
+            "secret",
+            "num_of_retries_for_authentication",
+            "wait_time_for_authentication_retries",
+            "raise_authentication_exceptions",
+            "auth_api_token_url",
+            "refresh_token_url",
+            "access_token",
+            "user_id",
+            "override_app_server_host",
+            "override_app_server_full_url",
+            "override_rest_api_host",
+            "override_rest_api_full_url",
+            "should_use_refresh_tokens",
+        ]
 
     def _raise_if_missing_params(self):
         self._raise_if_missing_user_id()
@@ -89,7 +107,6 @@ class Base(ABC):
                 "MonaAuth is initiated with missing params. "
                 "Please provide auth_api_token_url, api_key and secret."
             )
-
 
     def initial_auth(self):
         if not self.is_authenticated():
@@ -206,10 +223,15 @@ class Base(ABC):
         return response
 
     def should_refresh_token(self):
-        return (
-            get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
-            < datetime.now()
+        time_to_refresh = get_token_info_by_api_key(
+            self.api_key, TIME_TO_REFRESH_INTERNAL_KEY
         )
+
+        if not time_to_refresh:
+            get_logger().warning("No time to refresh found, refreshing token.")
+            return True
+
+        return time_to_refresh < datetime.now()
 
     def get_auth_header(self):
         return BASIC_HEADER

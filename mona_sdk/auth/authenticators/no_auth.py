@@ -1,10 +1,14 @@
 from mona_sdk.messages import UNAUTHENTICATED_CHECK_ERROR_MESSAGE
-from mona_sdk.auth.authenticators.base import Base
+from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 
 
-class NoAuth(Base):
+class NoAuth(BaseAuthenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def get_valid_keys(cls):
+        return super().get_valid_keys()
 
     def initial_auth(self):
         return True
