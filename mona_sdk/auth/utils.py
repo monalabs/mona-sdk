@@ -1,18 +1,3 @@
-# ----------------------------------------------------------------------------
-#    Copyright 2021 MonaLabs.io
-#
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
-# ----------------------------------------------------------------------------
 """
 This module holds all authentication information and related functions. For a given
 api_key, it can provide a new access token, refresh an expired access token or give
@@ -24,7 +9,7 @@ from threading import Lock
 from mona_sdk.logger import get_logger
 from requests.models import Response
 from mona_sdk.client_util import get_dict_result
-from mona_sdk.auth.auth_globals import ERRORS_INTERNAL_KEY
+from mona_sdk.auth.globals import ERRORS_INTERNAL_KEY
 from mona_sdk.client_exceptions import MonaAuthenticationException
 
 # This dict maps between every api_key (each api_key is saved only once in this dict)
@@ -74,9 +59,9 @@ def get_auth_response_with_retries(
                 # authentications server problems, return a response with the relevant
                 # info.
                 response = _create_a_bad_response(
-                    '{"errors": ["Could not connect to authentication server",'
-                    ' "Number of retries: ' + str(i) + '"]}'
-                    ' "Exception: ' + str(e) + '"'
+                    f'{{"errors": ["Could not connect to authentication server", '
+                    f'"Number of retries: {i}"]}} "Exception: {e}"'
+
                 )
 
             else:

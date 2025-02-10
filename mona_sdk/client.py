@@ -16,11 +16,14 @@
 import os
 import json
 import logging
+from functools import wraps
 from json import JSONDecodeError
 from typing import List
 
 import requests
 from cachetools import TTLCache, cached
+
+from mona_sdk.auth.utils import handle_authentications_error, authentication_lock
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -44,7 +47,7 @@ from mona_sdk.client_util import (
     get_boolean_value_for_env_var,
     ged_dict_with_filtered_out_none_values,
 )
-from mona_sdk.auth.auth_globals import (
+from mona_sdk.auth.globals import (
     SECRET,
     API_KEY,
     USER_ID,
@@ -53,10 +56,10 @@ from mona_sdk.auth.auth_globals import (
     ACCESS_TOKEN,
     SHOULD_USE_AUTHENTICATION,
     SHOULD_USE_REFRESH_TOKENS,
+    AUTH_API_TOKEN_URL,
+    REFRESH_TOKEN_URL,
 )
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
-from mona_sdk.auth.auth_requests import REFRESH_TOKEN_URL, AUTH_API_TOKEN_URL
-from mona_sdk.auth.auth_decorator import Decorators
 from mona_sdk.mona_single_message import MonaSingleMessage
 from mona_sdk.auth.get_authenticator import get_authenticator
 
@@ -136,6 +139,62 @@ CONTEXT_ID_FIELD_NAME = "contextId"
 
 CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
+
+
+class Decorators(object):
+    @classmethod
+    def refresh_token_if_needed(cls, decorated):
+        """
+        This decorator checks if the current client's access token is about to
+        be expired/already expired, and if so, updates to a new one.
+        """
+
+        @wraps(decorated)
+        def inner(*args, **kwargs):
+            # Since we are decorating a method, the first argument is self, which is the
+            # Mona Client instance.
+            mona_client = args[0]
+
+            # If len(args) < 1, the wrapped function does not have args to log (neither
+            # messages nor config)
+            should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
+
+            # message_to_log is the messages/config that should be logged in case of
+            # an authentication failure.
+            message_to_log = args[1] if should_log_args else None
+
+            if not mona_client.authenticator.is_authenticated():
+                return handle_authentications_error(
+                    "Mona's client is not authenticated",
+                    mona_client.authenticator.raise_auth_exceptions,
+                    message_to_log,
+                )
+
+            if mona_client.authenticator.should_refresh_token():
+                with authentication_lock:
+                    # The inner check is needed to avoid double token refresh.
+
+                    if mona_client.authenticator.should_refresh_token():
+                        refresh_token_response = (
+                            mona_client.authenticator.refresh_token()
+                        )
+
+                        if not refresh_token_response.ok:
+
+                            # TODO(anat): Check if the current token is still valid to
+                            #   call the function anyway.
+                            return handle_authentications_error(
+                                f"Could not refresh token: "
+                                f"{refresh_token_response.text}",
+                                should_raise_exception=(
+                                    mona_client.authenticator.raise_auth_exceptions
+                                ),
+                                message_to_log=message_to_log,
+                            )
+
+            return decorated(*args, **kwargs)
+
+        return inner
 
 
 class Client:

@@ -1,17 +1,16 @@
 import jwt
 import requests
-from mona_sdk.auth.auth_utils import (
+from mona_sdk.auth.utils import (
     get_token_info_by_api_key,
     get_current_token_by_api_key,
 )
-from mona_sdk.auth.auth_globals import (
+from mona_sdk.auth.globals import (
     EXPIRES_KEY_IN_MONA,
     MONA_ACCESS_TOKEN_KEY,
-    MONA_REFRESH_TOKEN_KEY,
+    MONA_REFRESH_TOKEN_KEY, BASIC_HEADER,
 )
 from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.auth.auth_requests import BASIC_HEADER
-from mona_sdk.auth.auth_classes.base_auth import Base
+from mona_sdk.auth.authenticators.base import Base
 
 
 class MonaAuth(Base):
@@ -20,11 +19,7 @@ class MonaAuth(Base):
         self.expires_key = EXPIRES_KEY_IN_MONA
 
     def _raise_if_missing_params(self):
-        if not self.auth_api_token_url or not self.api_key or not self.secret:
-            raise MonaInitializationException(
-                "MonaAuth is initiated with missing params. "
-                "Please provide auth_api_token_url, api_key and secret."
-            )
+        self._raise_if_missing_token_params()
 
     def request_access_token(self):
         return requests.request(
@@ -54,7 +49,7 @@ class MonaAuth(Base):
             self.refresh_token_url,
             headers=BASIC_HEADER,
             json={
-                "refreshToken": get_token_info_by_api_key(
+                MONA_REFRESH_TOKEN_KEY: get_token_info_by_api_key(
                     self.api_key, MONA_REFRESH_TOKEN_KEY
                 )
             },

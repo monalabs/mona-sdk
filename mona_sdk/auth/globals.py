@@ -18,6 +18,10 @@ TIME_TO_REFRESH_INTERNAL_KEY = "timeToRefresh"
 IS_AUTHENTICATED_INTERNAL_KEY = "isAuthenticated"
 MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY = "manual_token_mode"
 
+CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials"
+BASIC_HEADER = {"Content-Type": "application/json"}
+URL_ENCODED_HEADER = {"Content-Type": "application/x-www-form-urlencoded"}
+
 OIDC_AUTH_MODE = "OIDC"
 MONA_AUTH_MODE = "MONA"
 MANUAL_TOKEN_AUTH_MODE = "MANUAL_TOKEN"
@@ -38,17 +42,24 @@ AUTH_MODE = environ.get(
     MONA_AUTH_MODE,
 )
 
+AUTH_API_TOKEN_URL = os.environ.get(
+    "MONA_SDK_AUTH_API_TOKEN_URL",
+    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token",
+)
+REFRESH_TOKEN_URL = os.environ.get(
+    "MONA_SDK_REFRESH_TOKEN_URL",
+    "https://monalabs.frontegg.com/identity/resources/auth/v1/api-token/"
+    "token/refresh",
+)
+
+
 # As of 29/1/2025, a new token expires after 4 hours. REFRESH_TOKEN_SAFETY_MARGIN is the
 # safety gap of time to refresh the token before it expires (i.e. - in case
 # REFRESH_TOKEN_SAFETY_MARGIN = 2, and the token is about to expire in 2 hours or less,
 # the client will automatically refresh the token to a new one).
-REFRESH_TOKEN_SAFETY_MARGIN_HOURS = datetime.timedelta(
-    minutes=int(
-        os.environ.get(
-            "MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN_HOURS",
-            # Backward compatibility.
-            os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 0.5),
-        )
+REFRESH_TOKEN_SAFETY_MARGIN = datetime.timedelta(
+    hours=int(
+        os.environ.get("MONA_SDK_REFRESH_TOKEN_SAFETY_MARGIN", 0.5),
     )
 )
 

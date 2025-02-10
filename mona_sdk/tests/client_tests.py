@@ -5,8 +5,9 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
+from mona_sdk.auth.globals import MONA_REFRESH_TOKEN_KEY
 from mona_sdk.client import Client, MonaSingleMessage
-from mona_sdk.auth.auth_utils import get_auth_response_with_retries
+from mona_sdk.auth.utils import get_auth_response_with_retries
 from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationException
 
 # This token (when decoded) contains this payload: {"tenantId": "test_tenant_id"}, so
@@ -31,7 +32,7 @@ class ClientTests(unittest.TestCase):
         mock_request.return_value.ok = True
         mock_request.return_value.json.return_value = {
             "accessToken": TEST_TOKEN,
-            "refreshToken": "test_refresh_token",
+            MONA_REFRESH_TOKEN_KEY: "test_refresh_token",
             "expires": "Mon, 16 Feb 2099 15:26:22 GMT",
         }
         return Client(

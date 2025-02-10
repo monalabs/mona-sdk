@@ -1,13 +1,14 @@
 import requests
-from mona_sdk.auth.auth_utils import get_current_token_by_api_key
-from mona_sdk.auth.auth_globals import EXPIRES_KEY_IN_OIDC, OIDC_ACCESS_TOKEN_KEY
-from mona_sdk.client_exceptions import MonaInitializationException
-from mona_sdk.auth.auth_requests import (
-    BASIC_HEADER,
-    URLENCODED_HEADER,
+from mona_sdk.auth.utils import get_current_token_by_api_key
+from mona_sdk.auth.globals import (
+    EXPIRES_KEY_IN_OIDC,
+    OIDC_ACCESS_TOKEN_KEY,
     CLIENT_CREDENTIALS_GRANT_TYPE,
+    BASIC_HEADER,
+    URL_ENCODED_HEADER,
 )
-from mona_sdk.auth.auth_classes.base_auth import Base
+from mona_sdk.client_exceptions import MonaInitializationException
+from mona_sdk.auth.authenticators.base import Base
 
 
 class OidcAuth(Base):
@@ -21,22 +22,10 @@ class OidcAuth(Base):
         self.should_use_refresh_tokens = False
 
     def _raise_if_missing_params(self):
-        if not self.user_id:
-            raise MonaInitializationException(
-                f"Mona Client is initiated with an auth mode that requires user_id."
-            )
 
-        if (
-            not self.override_rest_api_host
-            and not self.override_rest_api_full_url
-            and not self.override_app_server_host
-            and not self.override_app_server_full_url
-        ):
-            raise MonaInitializationException(
-                "Mona client is initiated with an "
-                "auth mode the requires a host or a "
-                "full url."
-            )
+        self._raise_if_missing_token_params()
+        self._raise_if_missing_user_id()
+        self._raise_if_missing_backend_params()
 
         if not self.auth_api_token_url or not self.api_key or not self.secret:
             raise MonaInitializationException(
@@ -57,9 +46,12 @@ class OidcAuth(Base):
         return requests.request(
             "POST",
             self.auth_api_token_url,
-            headers=URLENCODED_HEADER,
+            headers=URL_ENCODED_HEADER,
             data={**data_kwargs},
         )
+
+    def request_refresh_token(self):
+        raise NotImplementedError
 
     def get_auth_header(self):
         token = get_current_token_by_api_key(

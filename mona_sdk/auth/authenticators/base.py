@@ -1,8 +1,9 @@
-import datetime
-from abc import abstractmethod
+from datetime import datetime, timedelta
+from abc import abstractmethod, ABC
 
+from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.logger import get_logger
-from mona_sdk.auth.auth_utils import (
+from mona_sdk.auth.utils import (
     API_KEYS_TO_TOKEN_DATA,
     authentication_lock,
     get_token_info_by_api_key,
@@ -10,15 +11,15 @@ from mona_sdk.auth.auth_utils import (
     get_auth_response_with_retries,
     get_error_string_from_token_info,
 )
-from mona_sdk.auth.auth_globals import (
+from mona_sdk.auth.globals import (
     TIME_TO_REFRESH_INTERNAL_KEY,
     IS_AUTHENTICATED_INTERNAL_KEY,
-    REFRESH_TOKEN_SAFETY_MARGIN_HOURS,
+    REFRESH_TOKEN_SAFETY_MARGIN,
+    BASIC_HEADER,
 )
-from mona_sdk.auth.auth_requests import BASIC_HEADER
 
 
-class Base:
+class Base(ABC):
     def __init__(
         self,
         api_key,
@@ -57,15 +58,44 @@ class Base:
 
         self._raise_if_missing_params()
 
-    @abstractmethod
     def _raise_if_missing_params(self):
-        pass
+        self._raise_if_missing_user_id()
+        self._raise_if_missing_backend_params()
+
+    def _raise_if_missing_user_id(self):
+        if not self.user_id:
+            raise MonaInitializationException(
+                f"Mona Client is initiated with an auth mode that requires user_id."
+            )
+
+    def _raise_if_missing_backend_params(self):
+        if not any(
+            [
+                self.override_rest_api_host,
+                self.override_rest_api_full_url,
+                self.override_app_server_host,
+                self.override_app_server_full_url,
+            ]
+        ):
+            raise MonaInitializationException(
+                "Mona client is initiated with an "
+                "auth mode the requires a host or a "
+                "full url."
+            )
+
+    def _raise_if_missing_token_params(self):
+        if not self.auth_api_token_url or not self.api_key or not self.secret:
+            raise MonaInitializationException(
+                "MonaAuth is initiated with missing params. "
+                "Please provide auth_api_token_url, api_key and secret."
+            )
+
 
     def initial_auth(self):
         if not self.is_authenticated():
-            # Make sure only one instance of the client (with the given api_key) can get a
-            # new token. That token will be shared between all instances that share an
-            # api_key.
+            # Make sure only one instance of the client (with the given api_key) can get
+            # a new token. That token will be shared between all instances that share
+            # an api_key.
 
             with authentication_lock:
                 # The inner check is needed to avoid multiple redundant authentications.
@@ -104,11 +134,13 @@ class Base:
     def is_authenticated(self):
         return get_token_info_by_api_key(self.api_key, IS_AUTHENTICATED_INTERNAL_KEY)
 
+    @abstractmethod
     def request_access_token(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def request_refresh_token(self):
-        raise NotImplementedError
+        pass
 
     def _request_access_token_with_retries(self):
         return get_auth_response_with_retries(
@@ -176,7 +208,7 @@ class Base:
     def should_refresh_token(self):
         return (
             get_token_info_by_api_key(self.api_key, TIME_TO_REFRESH_INTERNAL_KEY)
-            < datetime.datetime.now()
+            < datetime.now()
         )
 
     def get_auth_header(self):
@@ -190,17 +222,22 @@ class Base:
         if not self.is_authenticated():
             return None
 
-        token_expires = datetime.datetime.now() + datetime.timedelta(
+        token_expires = datetime.now() + timedelta(
             seconds=get_token_info_by_api_key(
                 self.api_key,
                 token_data_arg=self.expires_key,
             )
         )
 
-        return token_expires - REFRESH_TOKEN_SAFETY_MARGIN_HOURS
+        return token_expires - REFRESH_TOKEN_SAFETY_MARGIN
 
     @staticmethod
     def get_unauthenticated_mode_error_message():
+        """
+        If we are in AUTH_MODE="NO_AUTH", return an error message (suggesting
+        that auth being off might be the cause for the exception)
+        and an empty string otherwise.
+        """
         return ""
 
     def is_authentication_used(self):
