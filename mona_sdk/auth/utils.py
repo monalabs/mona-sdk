@@ -61,7 +61,6 @@ def get_auth_response_with_retries(
                 response = _create_a_bad_response(
                     f'{{"errors": ["Could not connect to authentication server", '
                     f'"Number of retries: {i}"]}} "Exception: {e}"'
-
                 )
 
             else:

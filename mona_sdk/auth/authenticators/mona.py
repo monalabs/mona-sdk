@@ -1,13 +1,11 @@
 import jwt
 import requests
-from mona_sdk.auth.utils import (
-    get_token_info_by_api_key,
-    get_current_token_by_api_key,
-)
+from mona_sdk.auth.utils import get_token_info_by_api_key, get_current_token_by_api_key
 from mona_sdk.auth.globals import (
+    BASIC_HEADER,
     EXPIRES_KEY_IN_MONA,
     MONA_ACCESS_TOKEN_KEY,
-    MONA_REFRESH_TOKEN_KEY, BASIC_HEADER,
+    MONA_REFRESH_TOKEN_KEY,
 )
 from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 

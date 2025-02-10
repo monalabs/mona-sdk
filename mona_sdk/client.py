@@ -16,18 +16,12 @@
 import os
 import json
 import logging
-from functools import wraps
 from json import JSONDecodeError
 from typing import List
+from functools import wraps
 
 import requests
 from cachetools import TTLCache, cached
-
-from mona_sdk.auth.authenticators.manual_token import ManualTokenAuth
-from mona_sdk.auth.authenticators.mona import MonaAuth
-from mona_sdk.auth.authenticators.no_auth import NoAuth
-from mona_sdk.auth.authenticators.oidc import OidcAuth
-from mona_sdk.auth.utils import handle_authentications_error, authentication_lock
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -35,6 +29,7 @@ from mona_sdk.messages import (
     CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
     RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
 )
+from mona_sdk.auth.utils import authentication_lock, handle_authentications_error
 from mona_sdk.validation import (
     handle_export_error,
     update_mona_fields_names,
@@ -58,14 +53,21 @@ from mona_sdk.auth.globals import (
     AUTH_MODE,
     OIDC_SCOPE,
     ACCESS_TOKEN,
+    NO_AUTH_MODE,
+    MONA_AUTH_MODE,
+    OIDC_AUTH_MODE,
+    REFRESH_TOKEN_URL,
+    AUTH_API_TOKEN_URL,
+    MANUAL_TOKEN_AUTH_MODE,
     SHOULD_USE_AUTHENTICATION,
     SHOULD_USE_REFRESH_TOKENS,
-    AUTH_API_TOKEN_URL,
-    REFRESH_TOKEN_URL, MONA_AUTH_MODE, MANUAL_TOKEN_AUTH_MODE, OIDC_AUTH_MODE,
-    NO_AUTH_MODE,
 )
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
+from mona_sdk.auth.authenticators.mona import MonaAuth
+from mona_sdk.auth.authenticators.oidc import OidcAuth
+from mona_sdk.auth.authenticators.no_auth import NoAuth
+from mona_sdk.auth.authenticators.manual_token import ManualTokenAuth
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -146,11 +148,11 @@ SERVER_ERROR_RESPONSE_STATUS_CODE = 500
 
 
 AUTH_MODE_MAP = {
-        MONA_AUTH_MODE: MonaAuth,
-        OIDC_AUTH_MODE: OidcAuth,
-        MANUAL_TOKEN_AUTH_MODE: ManualTokenAuth,
-        NO_AUTH_MODE: NoAuth,
-    }
+    MONA_AUTH_MODE: MonaAuth,
+    OIDC_AUTH_MODE: OidcAuth,
+    MANUAL_TOKEN_AUTH_MODE: ManualTokenAuth,
+    NO_AUTH_MODE: NoAuth,
+}
 
 
 def get_authenticator(auth_mode, should_use_authentication, **kwargs):
@@ -161,6 +163,7 @@ def get_authenticator(auth_mode, should_use_authentication, **kwargs):
 
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
     return cls(**filtered_kwargs)
+
 
 class Decorators(object):
     @classmethod
@@ -216,8 +219,6 @@ class Decorators(object):
             return decorated(*args, **kwargs)
 
         return inner
-
-
 
 
 class Client:

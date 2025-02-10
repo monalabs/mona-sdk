@@ -1,13 +1,10 @@
 from mona_sdk.logger import get_logger
-from mona_sdk.auth.utils import (
-    API_KEYS_TO_TOKEN_DATA,
-    get_current_token_by_api_key,
-)
+from mona_sdk.auth.utils import API_KEYS_TO_TOKEN_DATA, get_current_token_by_api_key
 from mona_sdk.auth.globals import (
+    BASIC_HEADER,
     MANUAL_ACCESS_TOKEN_KEY,
     IS_AUTHENTICATED_INTERNAL_KEY,
     MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
-    BASIC_HEADER,
 )
 from mona_sdk.auth.authenticators.base_authenticator import BaseAuthenticator
 

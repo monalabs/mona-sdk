@@ -5,9 +5,9 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
-from mona_sdk.auth.globals import MONA_REFRESH_TOKEN_KEY
 from mona_sdk.client import Client, MonaSingleMessage
 from mona_sdk.auth.utils import get_auth_response_with_retries
+from mona_sdk.auth.globals import MONA_REFRESH_TOKEN_KEY
 from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationException
 
 # This token (when decoded) contains this payload: {"tenantId": "test_tenant_id"}, so

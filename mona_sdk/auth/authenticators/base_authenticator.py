@@ -1,7 +1,6 @@
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from abc import abstractmethod, ABC
 
-from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.logger import get_logger
 from mona_sdk.auth.utils import (
     API_KEYS_TO_TOKEN_DATA,
@@ -12,11 +11,12 @@ from mona_sdk.auth.utils import (
     get_error_string_from_token_info,
 )
 from mona_sdk.auth.globals import (
+    BASIC_HEADER,
+    REFRESH_TOKEN_SAFETY_MARGIN,
     TIME_TO_REFRESH_INTERNAL_KEY,
     IS_AUTHENTICATED_INTERNAL_KEY,
-    REFRESH_TOKEN_SAFETY_MARGIN,
-    BASIC_HEADER,
 )
+from mona_sdk.client_exceptions import MonaInitializationException
 
 
 class BaseAuthenticator(ABC):
