@@ -22,8 +22,6 @@ from functools import wraps
 
 import requests
 from cachetools import TTLCache, cached
-
-from mona_sdk.auth.authenticators.factory import get_authenticator
 from mona_sdk.logger import get_logger
 from mona_sdk.messages import (
     SERVICE_ERROR_MESSAGE,
@@ -62,6 +60,7 @@ from mona_sdk.auth.globals import (
 )
 from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
 from mona_sdk.mona_single_message import MonaSingleMessage
+from mona_sdk.auth.authenticators.factory import get_authenticator
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
