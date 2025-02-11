@@ -1,7 +1,6 @@
 import requests
 from mona_sdk.auth.utils import get_current_token_by_api_key
 from mona_sdk.auth.globals import (
-    BASIC_HEADER,
     URL_ENCODED_HEADER,
     EXPIRES_KEY_IN_OIDC,
     OIDC_ACCESS_TOKEN_KEY,
@@ -62,7 +61,4 @@ class OidcAuth(BaseAuthenticator):
             api_key=self.api_key, access_token_key=OIDC_ACCESS_TOKEN_KEY
         )
 
-        return {
-            **BASIC_HEADER,
-            "Authorization": f"Bearer {token}",
-        }
+        return BaseAuthenticator.create_auth_headers(token)

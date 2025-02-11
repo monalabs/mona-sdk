@@ -1,7 +1,7 @@
+from mona_sdk.client_exceptions import MonaInitializationException
 from mona_sdk.logger import get_logger
 from mona_sdk.auth.utils import API_KEYS_TO_TOKEN_DATA, get_current_token_by_api_key
 from mona_sdk.auth.globals import (
-    BASIC_HEADER,
     MANUAL_ACCESS_TOKEN_KEY,
     IS_AUTHENTICATED_INTERNAL_KEY,
     MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY,
@@ -14,6 +14,18 @@ class ManualTokenAuth(BaseAuthenticator):
         super().__init__(*args, **kwargs)
         self.api_key = MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY
 
+    def _raise_if_missing_manual_token(self):
+        if not self.manual_access_token:
+            raise MonaInitializationException(
+                "MonaAuth is initiated with missing params. "
+                "Please provide access_token."
+            )
+
+    def _raise_if_missing_params(self):
+        self._raise_if_missing_manual_token()
+        self._raise_if_missing_user_id()
+        self._raise_if_missing_backend_params()
+
     @classmethod
     def get_valid_keys(cls):
         return super().get_valid_keys()
@@ -22,7 +34,7 @@ class ManualTokenAuth(BaseAuthenticator):
         get_logger().info("Manual token mode is on.")
 
         API_KEYS_TO_TOKEN_DATA[MANUAL_TOKEN_STRING_FOR_API_INTERNAL_KEY] = {
-            MANUAL_ACCESS_TOKEN_KEY: self.access_token,
+            MANUAL_ACCESS_TOKEN_KEY: self.manual_access_token,
             IS_AUTHENTICATED_INTERNAL_KEY: True,
         }
 
@@ -45,7 +57,4 @@ class ManualTokenAuth(BaseAuthenticator):
             api_key=self.api_key, access_token_key=MANUAL_ACCESS_TOKEN_KEY
         )
 
-        return {
-            **BASIC_HEADER,
-            "Authorization": f"Bearer {token}",
-        }
+        return BaseAuthenticator.create_auth_headers(token)

@@ -42,7 +42,7 @@ class BaseAuthenticator(ABC):
         self.num_of_retries = num_of_retries_for_authentication
         self.auth_wait_time_sec = wait_time_for_authentication_retries
         self.raise_auth_exceptions = raise_authentication_exceptions
-        self.access_token = access_token
+        self.manual_access_token = access_token
         self.user_id = user_id
         self.override_app_server_host = override_app_server_host
         self.override_app_server_full_url = override_app_server_full_url
@@ -233,8 +233,19 @@ class BaseAuthenticator(ABC):
 
         return time_to_refresh < datetime.now()
 
+    @staticmethod
+    def create_auth_headers(token=None):
+        return (
+            {**BASIC_HEADER}
+            if not token
+            else {
+                **BASIC_HEADER,
+                "Authorization": f"Bearer {token}",
+            }
+        )
+
     def get_auth_header(self):
-        return BASIC_HEADER
+        return BaseAuthenticator.create_auth_headers()
 
     def calculate_time_to_refresh(self):
         """

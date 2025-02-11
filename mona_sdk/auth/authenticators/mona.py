@@ -61,7 +61,4 @@ class MonaAuth(BaseAuthenticator):
             api_key=self.api_key, access_token_key=MONA_ACCESS_TOKEN_KEY
         )
 
-        return {
-            **BASIC_HEADER,
-            "Authorization": f"Bearer {token}",
-        }
+        return BaseAuthenticator.create_auth_headers(token)
