@@ -25,7 +25,9 @@ def get_authenticator(auth_mode, should_use_authentication, access_token, **kwar
 
     valid_keys = cls.get_valid_keys()
     kwargs_with_access_token = {**kwargs, "access_token": access_token}
-    filtered_kwargs = {k: v for k, v in kwargs_with_access_token.items() if k in valid_keys}
+    filtered_kwargs = {
+        k: v for k, v in kwargs_with_access_token.items() if k in valid_keys
+    }
 
     return cls(**filtered_kwargs)
 
