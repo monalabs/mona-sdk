@@ -26,10 +26,6 @@ class ManualTokenAuth(BaseAuthenticator):
         self._raise_if_missing_user_id()
         self._raise_if_missing_backend_params()
 
-    @classmethod
-    def get_valid_keys(cls):
-        return super().get_valid_keys()
-
     def initial_auth(self):
         get_logger().info("Manual token mode is on.")
 

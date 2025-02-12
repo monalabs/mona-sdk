@@ -15,10 +15,6 @@ class MonaAuth(BaseAuthenticator):
         super().__init__(*args, **kwargs)
         self.expires_key = EXPIRES_KEY_IN_MONA
 
-    @classmethod
-    def get_valid_keys(cls):
-        return super().get_valid_keys()
-
     def _raise_if_missing_params(self):
         self._raise_if_missing_token_params()
 

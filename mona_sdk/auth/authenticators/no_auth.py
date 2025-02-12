@@ -6,10 +6,6 @@ class NoAuth(BaseAuthenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @classmethod
-    def get_valid_keys(cls):
-        return super().get_valid_keys()
-
     def initial_auth(self):
         return True
 
