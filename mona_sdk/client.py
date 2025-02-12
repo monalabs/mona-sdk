@@ -18,36 +18,49 @@ import json
 import logging
 from json import JSONDecodeError
 from typing import List
-from dataclasses import dataclass
+from functools import wraps
 
-import jwt
 import requests
 from cachetools import TTLCache, cached
-from requests.exceptions import ConnectionError
-from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
-
-from .logger import get_logger
-from .validation import (
+from mona_sdk.logger import get_logger
+from mona_sdk.messages import (
+    SERVICE_ERROR_MESSAGE,
+    APP_SERVER_CONNECTION_ERROR_MESSAGE,
+    CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE,
+    RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE,
+)
+from mona_sdk.auth.utils import authentication_lock, handle_authentications_error
+from mona_sdk.validation import (
     handle_export_error,
     update_mona_fields_names,
     validate_inner_message_type,
     validate_mona_single_message,
     mona_messages_to_dicts_validation,
 )
-from .client_util import (
+from requests.exceptions import ConnectionError
+from mona_sdk.client_util import (
     get_dict_result,
     remove_items_by_value,
     get_dict_value_for_env_var,
     keep_message_after_sampling,
     get_boolean_value_for_env_var,
+    ged_dict_with_filtered_out_none_values,
 )
-from .authentication import (
-    Decorators,
-    is_authenticated,
-    first_authentication,
-    get_basic_auth_header,
-    get_current_token_by_api_key,
+from mona_sdk.auth.globals import (
+    SECRET,
+    API_KEY,
+    USER_ID,
+    AUTH_MODE,
+    OIDC_SCOPE,
+    ACCESS_TOKEN,
+    REFRESH_TOKEN_URL,
+    AUTH_API_TOKEN_URL,
+    SHOULD_USE_AUTHENTICATION,
+    SHOULD_USE_REFRESH_TOKENS,
 )
+from mona_sdk.client_exceptions import MonaServiceException, MonaInitializationException
+from mona_sdk.mona_single_message import MonaSingleMessage
+from mona_sdk.auth.authenticators.factory import get_authenticator
 
 # Note: if RAISE_AUTHENTICATION_EXCEPTIONS = False and the client could not
 # authenticate, every function call will return false.
@@ -64,16 +77,12 @@ RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
-SHOULD_USE_AUTHENTICATION = get_boolean_value_for_env_var(
-    "MONA_SDK_SHOULD_USE_AUTHENTICATION", True
-)
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
+OVERRIDE_APP_SERVER_URL = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_URL")
 OVERRIDE_APP_SERVER_HOST = os.environ.get("MONA_SDK_OVERRIDE_APP_SERVER_HOST")
 
-# TODO(anat): Once no one is using it, remove this env var (leave only
-#  OVERRIDE_REST_API_HOST).
 OVERRIDE_REST_API_URL = os.environ.get("MONA_SDK_OVERRIDE_REST_API_URL")
 OVERRIDE_REST_API_HOST = os.environ.get("MONA_SDK_OVERRIDE_REST_API_HOST")
 
@@ -99,12 +108,13 @@ FILTER_NONE_FIELDS_ON_EXPORT = get_boolean_value_for_env_var(
     "MONA_SDK_FILTER_NONE_FIELDS_ON_EXPORT", False
 )
 
-# SDK will randomly sample the sent data using this factor and disregard the sampled-
-# out data, unless the sent data is set on a class overridden by
+# SDK will randomly sample the data that was sent using this factor and disregard the
+# sampled-out data, unless the data that was sent is set on a class overridden by
 # MONA_SDK_SAMPLING_CONFIG.
 DEFAULT_SAMPLING_FACTOR = float(os.environ.get("MONA_SDK_DEFAULT_SAMPLING_FACTOR", 1))
 
-# When set, SDK will randomly sample the sent data for any class keyed in the config.
+# When set, SDK will randomly sample the data that was sent for any class keyed in the
+# config.
 # See readme for more details.
 SAMPLING_CONFIG = get_dict_value_for_env_var(
     "MONA_SDK_SAMPLING_CONFIG", cast_values=float
@@ -116,27 +126,12 @@ SAMPLING_FACTORS_MAX_AGE_SECONDS = float(
     os.environ.get("SAMPLING_FACTORS_MAX_AGE_SECONDS", 300)
 )
 
-UNAUTHENTICATED_CHECK_ERROR_MESSAGE = (
-    "Notice that should_use_authentication is set to False, which is not supported by "
-    "default and must be explicitly requested from Mona team. "
-)
-SERVICE_ERROR_MESSAGE = "Could not get server response for the wanted service"
-
-RETRIEVE_CONFIG_HISTORY_ERROR_MESSAGE = "Retrieve history is empty"
-GET_AGGREGATED_STATS_OF_SPECIFIC_SEGMENTATION_ERROR_MESSAGE = (
-    "Could not get aggregates state of a specific segmentation"
-)
-
-APP_SERVER_CONNECTION_ERROR_MESSAGE = "Cannot connect to app-server"
-
-CONFIG_MUST_BE_A_DICT_ERROR_MESSAGE = "config must be a dict"
-
 # The argument to use as a default value on the values of the data argument (dict) when
 # calling _app_server_request(). Use this and not None in order to be able to pass a
 # None argument if needed.
 UNPROVIDED_VALUE = "mona_unprovided_value"
 
-# TODO(anat): change the following line once REST-api allows "contextClass"
+# TODO(anat): Change the following line once REST-api allows "contextClass"
 #  instead of "arcClass".
 CONTEXT_CLASS_FIELD_NAME = "arcClass"
 CONTEXT_ID_FIELD_NAME = "contextId"
@@ -145,52 +140,60 @@ CLIENT_ERROR_RESPONSE_STATUS_CODE = 400
 SERVER_ERROR_RESPONSE_STATUS_CODE = 500
 
 
-@dataclass
-class MonaSingleMessage:
-    """
-    Class for keeping properties for a single Mona Message.
-    Attributes:
-        :param message (dict): (Required) JSON serializable dict with properties to send
-            about the context ID.
-        :param contextClass (str): (Required) context classes are defined in the Mona
-            Config and define the schema of the contexts.
-        :param contextId (str): (Optional) A unique identifier for the current context
-            instance. One can export multiple messages with the same context_id and Mona
-            would aggregate all of these messages to one big message on its backend.
-            If none is given, Mona will create a random uuid for it. This is highly
-            unrecommended - since it takes away the option to update this data in the
-            future.
-        :param exportTimestamp (int|str): (Optional) This is the primary timestamp Mona
-            will use when considering the data being sent. It should be a date (ISO
-            string or a Unix time number) representing the time the message was created.
-            If not supplied, current time is used.
-        :param action (str): (Optional) The action to use on the values in the fields of
-            this message - "OVERWRITE", "ADD" or "NEW" (default: "OVERWRITE").
+class Decorators(object):
+    @classmethod
+    def refresh_token_if_needed(cls, decorated):
+        """
+        This decorator checks if the current client's access token is about to
+        be expired/already expired, and if so, updates to a new one.
+        """
 
+        @wraps(decorated)
+        def inner(*args, **kwargs):
+            # Since we are decorating a method, the first argument is self, which is the
+            # Mona Client instance.
+            mona_client = args[0]
 
-    A new message initialization would look like this:
-    message_to_mona = MonaSingleMessage(
-        message=<the relevant monitoring information>,
-        contextClass="MY_CONTEXT_CLASS_NAME",
-        contextId=<the context instance unique id>,
-        exportTimestamp=<the message export timestamp>,
-        action=<the wanted action>,
-    )
-    """
+            # If len(args) < 1, the wrapped function does not have args to log (neither
+            # messages nor config)
+            should_log_args = len(args) > 1 and mona_client.should_log_failed_messages
 
-    message: dict
-    contextClass: str
-    contextId: str = None
-    exportTimestamp: int or str = None
-    action: str = None
-    sampleConfigName: str = None
+            # message_to_log is the messages/config that should be logged in case of
+            # an authentication failure.
+            message_to_log = args[1] if should_log_args else None
 
-    def get_dict(self):
-        return {
-            key: value
-            for key, value in self.__dict__.items()
-            if key in MonaSingleMessage.__dataclass_fields__.keys()
-        }
+            if not mona_client.authenticator.is_authenticated():
+                return handle_authentications_error(
+                    "Mona's client is not authenticated",
+                    mona_client.authenticator.raise_auth_exceptions,
+                    message_to_log,
+                )
+
+            if mona_client.authenticator.should_refresh_token():
+                with authentication_lock:
+                    # The inner check is needed to avoid double token refresh.
+
+                    if mona_client.authenticator.should_refresh_token():
+                        refresh_token_response = (
+                            mona_client.authenticator.refresh_token()
+                        )
+
+                        if not refresh_token_response.ok:
+
+                            # TODO(anat): Check if the current token is still valid to
+                            #   call the function anyway.
+                            return handle_authentications_error(
+                                f"Could not refresh token: "
+                                f"{refresh_token_response.text}",
+                                should_raise_exception=(
+                                    mona_client.authenticator.raise_auth_exceptions
+                                ),
+                                message_to_log=message_to_log,
+                            )
+
+            return decorated(*args, **kwargs)
+
+        return inner
 
 
 class Client:
@@ -201,8 +204,8 @@ class Client:
 
     def __init__(
         self,
-        api_key=None,
-        secret=None,
+        api_key=API_KEY,
+        secret=SECRET,
         raise_authentication_exceptions=RAISE_AUTHENTICATION_EXCEPTIONS,
         raise_export_exceptions=RAISE_EXPORT_EXCEPTIONS,
         raise_service_exceptions=RAISE_SERVICE_EXCEPTIONS,
@@ -210,73 +213,87 @@ class Client:
         wait_time_for_authentication_retries=WAIT_TIME_FOR_AUTHENTICATION_RETRIES_SEC,
         should_log_failed_messages=SHOULD_LOG_FAILED_MESSAGES,
         should_use_ssl=SHOULD_USE_SSL,
+        # "auth_mode" should be used instead of "should_use_authentication" - leaving
+        # this for backward compatibility.
         should_use_authentication=SHOULD_USE_AUTHENTICATION,
+        auth_mode=AUTH_MODE,
         override_rest_api_full_url=OVERRIDE_REST_API_URL,
         override_rest_api_host=OVERRIDE_REST_API_HOST,
         override_app_server_host=OVERRIDE_APP_SERVER_HOST,
-        user_id=None,
+        override_app_server_full_url=OVERRIDE_APP_SERVER_URL,
+        user_id=USER_ID,
         filter_none_fields_on_export=FILTER_NONE_FIELDS_ON_EXPORT,
         default_sampling_rate=DEFAULT_SAMPLING_FACTOR,
         context_class_to_sampling_rate=SAMPLING_CONFIG,
         sampling_config_name=SAMPLING_CONFIG_NAME,
+        access_token=ACCESS_TOKEN,
+        oidc_scope=OIDC_SCOPE,
+        auth_api_token_url=AUTH_API_TOKEN_URL,
+        refresh_token_url=REFRESH_TOKEN_URL,
+        should_use_refresh_tokens=SHOULD_USE_REFRESH_TOKENS,
     ):
+
         """
         Creates the Client object. this client is lightweight so it can be regenerated
         or reused to user convenience.
         :param api_key: An api key provided to you by Mona.
         :param secret: The secret corresponding to the given api_key.
         """
-        if not should_use_authentication and not user_id:
-            raise MonaInitializationException(
-                "When MONA_SDK_SHOULD_USE_AUTHENTICATION is turned off user_id must be "
-                "provided."
-            )
 
         if sampling_config_name and context_class_to_sampling_rate:
             raise MonaInitializationException(
                 "Only one sampling method can be used at a time. Either remove "
-                "sampling_config_name or context_class_to_sampling_rate"
+                "sampling_config_name or context_class_to_sampling_rate."
             )
 
         self._logger = get_logger()
 
-        self.api_key = api_key
-        self.secret = secret
+        self._override_rest_api_host = override_rest_api_host
+        self._override_rest_api_full_url = override_rest_api_full_url
+
+        self._override_app_server_host = override_app_server_host
+        self._override_app_server_full_url = override_app_server_full_url
 
         self.raise_export_exceptions = raise_export_exceptions
         self.raise_service_exceptions = raise_service_exceptions
         self.should_log_failed_messages = should_log_failed_messages
         self.should_use_ssl = should_use_ssl
-        self.should_use_authentication = should_use_authentication
 
-        if should_use_authentication:
-            self.raise_authentication_exceptions = raise_authentication_exceptions
-            self.num_of_retries_for_authentication = num_of_retries_for_authentication
-            self.wait_time_for_authentication_retries = (
-                wait_time_for_authentication_retries
-            )
-
-            could_authenticate = first_authentication(self)
-            if not could_authenticate:
-                # TODO(anat): consider replacing this return with an if statement for
-                #  the next part.
-                return
-
-        # If user_id=None then should_use_authentication must be True, which means at
-        # this point the client was successfully authenticated and self._get_user_id()
-        # will work.
-        self._user_id = user_id or self._get_user_id()
-        self._rest_api_url = (
-            override_rest_api_full_url
-            or self._get_rest_api_export_url(override_host=override_rest_api_host)
+        self.authenticator = get_authenticator(
+            api_key=api_key,
+            user_id=user_id,
+            secret=secret,
+            access_token=access_token,
+            should_use_authentication=should_use_authentication,
+            override_rest_api_full_url=override_rest_api_full_url,
+            override_rest_api_host=override_rest_api_host,
+            override_app_server_host=override_app_server_host,
+            override_app_server_full_url=override_app_server_full_url,
+            auth_api_token_url=auth_api_token_url,
+            refresh_token_url=refresh_token_url,
+            num_of_retries_for_authentication=num_of_retries_for_authentication,
+            wait_time_for_authentication_retries=wait_time_for_authentication_retries,
+            raise_authentication_exceptions=raise_authentication_exceptions,
+            auth_mode=auth_mode,
+            should_use_refresh_tokens=should_use_refresh_tokens,
+            oidc_scope=oidc_scope,
         )
-        self._app_server_url = self._get_app_server_url(
-            override_host=override_app_server_host
-        )
+
+        could_auth = self.authenticator.initial_auth()
+        if not could_auth:
+            logging.info("Initial auth failed.")
+            return
+
+        # We validate user_id for auth modes that do not support the usage of
+        # self._get_user_id() when initiating the authenticator.
+        self._user_id = user_id or self.authenticator.get_user_id()
+
+        self._rest_api_url = self._get_rest_api_export_url()
+        self._app_server_url = self._get_app_server_url()
+
         self.filter_none_fields_on_export = filter_none_fields_on_export
 
         # Data sampling.
-
         self._sampling_config_name = sampling_config_name
         self._context_class_to_sampling_rate = context_class_to_sampling_rate or {}
         self._default_sampling_rate = default_sampling_rate
@@ -296,43 +313,27 @@ class Client:
                 "default_factor", default_sampling_rate
             )
 
-    def _get_rest_api_export_url(self, override_host=None):
+    def _get_rest_api_export_url(self, _=None):
+        if self._override_rest_api_full_url:
+            return self._override_rest_api_full_url
+
         http_protocol = "https" if self.should_use_ssl else "http"
-        host_name = override_host or f"incoming{self._user_id}.monalabs.io"
-        endpoint_name = "export" if self.should_use_authentication else "monaExport"
+        host_name = (
+            self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
+        )
+        endpoint_name = (
+            "export" if self.authenticator.is_authentication_used() else "monaExport"
+        )
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
-    def _get_app_server_url(self, override_host=None):
+    def _get_app_server_url(self):
+        if self._override_app_server_full_url:
+            return self._override_app_server_full_url
+
         http_protocol = "https" if self.should_use_ssl else "http"
-        host_name = override_host or f"api{self._user_id}.monalabs.io"
+        host_name = self._override_rest_api_host or f"api{self._user_id}.monalabs.io"
+
         return f"{http_protocol}://{host_name}"
-
-    def is_active(self):
-        """
-        Returns True if the client is authenticated (or able to re-authenticate when
-        needed) and therefore can export messages, otherwise returns False, meaning the
-        client cannot export data to Mona's servers.
-        Use this method to check client status in case RAISE_AUTHENTICATION_EXCEPTIONS
-        is set to False.
-        """
-        return (
-            is_authenticated(self.api_key) if self.should_use_authentication else True
-        )
-
-    def _get_user_id(self):
-        """
-        :return: The customer's user id (tenant id).
-        """
-        decoded_token = jwt.decode(
-            get_current_token_by_api_key(self.api_key),
-            verify=False,
-            options={"verify_signature": False},
-        )
-        return decoded_token["tenantId"]
-
-    @staticmethod
-    def _filter_none_fields(message):
-        return {key: val for key, val in message.items() if val is not None}
 
     def _should_filter_none_fields(self, filter_none_fields):
         """
@@ -342,6 +343,7 @@ class Client:
             True if the None fields should be filtered, if the caller function did
             not provide filter_none_fields use the client's self default.
         """
+
         return (
             self.filter_none_fields_on_export
             if filter_none_fields is None
@@ -460,7 +462,7 @@ class Client:
                 continue
 
             if self._should_filter_none_fields(filter_none_fields):
-                message_copy["message"] = self._filter_none_fields(
+                message_copy["message"] = ged_dict_with_filtered_out_none_values(
                     message_copy["message"]
                 )
             # If the message was left empty after it was filtered, we don't want it to
@@ -492,7 +494,7 @@ class Client:
         if client_response["failed"] > 0:
             handle_export_error(
                 f"Some messages didn't pass validation: {client_response}."
-                f"{self._get_unauthenticated_mode_error_message()}",
+                f"{self.authenticator.get_unauthenticated_mode_error_message()}",
                 self.raise_export_exceptions,
                 events if self.should_log_failed_messages else None,
             )
@@ -527,7 +529,7 @@ class Client:
         return requests.request(
             "POST",
             self._rest_api_url,
-            headers=get_basic_auth_header(self.api_key, self.should_use_authentication),
+            headers=self.authenticator.get_auth_header(),
             json=body,
         )
 
@@ -563,9 +565,9 @@ class Client:
                     failed = result_info["failed"]
                     failure_reasons = result_info["failure_reasons"]
 
-            except Exception:
+            except Exception as e:
                 failed = total
-                failure_reasons = "Failed to send the batch to Mona's servers"
+                failure_reasons = f"Failed to send the batch to Mona's servers {e}"
 
         # Return the total result of the batch.
         return {
@@ -591,7 +593,7 @@ class Client:
         :param author: (str) An email address identifying the configuration uploader.
         Mona will use this mail to send updates regarding re-creation of insights upon
         this configuration change. When not supplied, the author will be the Client's
-        api-key and you will not get updates regarding the changes mentioned above.
+        api-key, and you will not get updates regarding the changes mentioned above.
         Must be provided when using un-authenticated mode.
         :return: A dict holding the upload data:
         {
@@ -599,7 +601,7 @@ class Client:
             "new_config_id": <the new configuration ID> (str)
         }
         """
-        if not author and not self.should_use_authentication:
+        if not author and not self.authenticator.is_authentication_used():
             return self._handle_service_error(
                 "When using non authenticated client, author must be provided. "
             )
@@ -613,7 +615,7 @@ class Client:
 
         config_to_upload = {
             "config": {self._user_id: config},
-            "author": author or self.api_key,
+            "author": author or self.authenticator.api_key,
             "commit_message": commit_message,
             "user_id": self._user_id,
         }
@@ -667,6 +669,7 @@ class Client:
                 ]
             }
             return get_dict_result(True, app_server_response, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -681,6 +684,7 @@ class Client:
         try:
             data = app_server_response["response_data"]["suggested_config"]
             return get_dict_result(True, data, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -716,7 +720,7 @@ class Client:
         if not self._sampling_config_name:
             return
 
-        # Refetch the updated config from the index.
+        # Re-fetch the updated config from the index.
         sampling_config = self.get_sampling_factors()[0]
 
         if self._latest_seen_sampling_config == sampling_config:
@@ -928,7 +932,7 @@ class Client:
         return (
             self._handle_service_error(app_server_response["error_message"])
             if "error_message" in app_server_response
-            # return the CRC's of the segment itself
+            # Return the CRCs of the segment itself
             else get_dict_result(
                 True, app_server_response["response_data"]["crcs"], None
             )
@@ -949,6 +953,7 @@ class Client:
         try:
             data = app_server_response["response_data"]["suggested_config"]
             return get_dict_result(True, data, None)
+
         except KeyError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
@@ -968,7 +973,7 @@ class Client:
         timestamp_field_name=UNPROVIDED_VALUE,
         right_inclusive=UNPROVIDED_VALUE,
         include_super_segments=UNPROVIDED_VALUE,
-        time_series_offset_seconds=UNPROVIDED_VALUE
+        time_series_offset_seconds=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Data of a Specific Segment" REST
@@ -991,7 +996,7 @@ class Client:
                 "timestamp_field_name": timestamp_field_name,
                 "right_inclusive": right_inclusive,
                 "include_super_segments": include_super_segments,
-                "time_series_offset_seconds": time_series_offset_seconds
+                "time_series_offset_seconds": time_series_offset_seconds,
             },
         )
         return (
@@ -1023,7 +1028,7 @@ class Client:
         compared_segments_filter=UNPROVIDED_VALUE,
         timestamp_field_name=UNPROVIDED_VALUE,
         metric_1_secondary_field=UNPROVIDED_VALUE,
-        metric_2_secondary_field=UNPROVIDED_VALUE
+        metric_2_secondary_field=UNPROVIDED_VALUE,
     ):
         """
         A wrapper function for "Retrieve Aggregated Stats of Specific Segmentation" REST
@@ -1049,7 +1054,7 @@ class Client:
                 "compared_segments_filter": compared_segments_filter,
                 "timestamp_field_name": timestamp_field_name,
                 "metric_1_secondary_field": metric_1_secondary_field,
-                "metric_2_secondary_field":  metric_2_secondary_field
+                "metric_2_secondary_field": metric_2_secondary_field,
             },
         )
 
@@ -1123,24 +1128,12 @@ class Client:
         Logs an error and raises MonaServiceException if RAISE_SERVICE_EXCEPTIONS is
         true, returns false otherwise.
         """
-        error_message += self._get_unauthenticated_mode_error_message()
+        error_message += self.authenticator.get_unauthenticated_mode_error_message()
 
         self._logger.error(error_message)
         if self.raise_service_exceptions:
             raise MonaServiceException(error_message)
         return get_dict_result(False, None, error_message)
-
-    def _get_unauthenticated_mode_error_message(self):
-        """
-        If should_use_authentication=False return an error message (suggesting
-        should_use_authentication mode turned off might be the cause for the exception)
-        and an empty string otherwise.
-        """
-        return (
-            ""
-            if self.should_use_authentication
-            else UNAUTHENTICATED_CHECK_ERROR_MESSAGE
-        )
 
     def _default_bad_response_handler(self, json_response, status_code):
         if (
@@ -1153,7 +1146,10 @@ class Client:
         return self._handle_service_error(SERVICE_ERROR_MESSAGE)
 
     def _app_server_request(
-        self, endpoint_name, data=None, custom_bad_response_handler=None
+        self,
+        endpoint_name,
+        data=None,
+        custom_bad_response_handler=lambda json_response, status_code: None,
     ):
         """
         Send a request to Mona's app-server given endpoint with the given data (should
@@ -1162,14 +1158,14 @@ class Client:
         try:
             app_server_response = requests.post(
                 f"{self._app_server_url}/{endpoint_name}",
-                headers=get_basic_auth_header(
-                    self.api_key, self.should_use_authentication
-                ),
+                headers=self.authenticator.get_auth_header(),
                 # Remove keys with UNPROVIDED_FIELD values to avoid overriding
                 # the default value on the endpoint itself.
                 json=(remove_items_by_value(data, UNPROVIDED_VALUE) if data else {}),
             )
+
             json_response = app_server_response.json()
+
             if not app_server_response.ok:
                 bad_response_handler = (
                     custom_bad_response_handler or self._default_bad_response_handler
@@ -1184,5 +1180,6 @@ class Client:
 
         except ConnectionError:
             return self._handle_service_error(APP_SERVER_CONNECTION_ERROR_MESSAGE)
+
         except JSONDecodeError:
             return self._handle_service_error(SERVICE_ERROR_MESSAGE)

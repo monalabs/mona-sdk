@@ -6,7 +6,8 @@ from datetime import datetime
 from unittest.mock import patch
 
 from mona_sdk.client import Client, MonaSingleMessage
-from mona_sdk.authentication import _get_auth_response_with_retries
+from mona_sdk.auth.utils import get_auth_response_with_retries
+from mona_sdk.auth.globals import MONA_REFRESH_TOKEN_KEY
 from mona_sdk.client_exceptions import MonaExportException, MonaAuthenticationException
 
 # This token (when decoded) contains this payload: {"tenantId": "test_tenant_id"}, so
@@ -31,7 +32,7 @@ class ClientTests(unittest.TestCase):
         mock_request.return_value.ok = True
         mock_request.return_value.json.return_value = {
             "accessToken": TEST_TOKEN,
-            "refreshToken": "test_refresh_token",
+            MONA_REFRESH_TOKEN_KEY: "test_refresh_token",
             "expires": "Mon, 16 Feb 2099 15:26:22 GMT",
         }
         return Client(
@@ -108,10 +109,10 @@ class ClientTests(unittest.TestCase):
         }
 
         bad_client = Client("WRONG_KEY", "WRONG_SECRET")
-        self.assertFalse(bad_client.is_active())
+        self.assertFalse(bad_client.authenticator.is_authenticated())
 
         good_client = self._init_test_client()
-        self.assertTrue(good_client.is_active())
+        self.assertTrue(good_client.authenticator.is_authenticated())
 
     @patch("mona_sdk.client.requests.request")
     def test_export_without_exception(self, mock_request):
@@ -283,7 +284,7 @@ class ClientTests(unittest.TestCase):
 
     def test_get_auth_response_with_retries(self):
         num_of_retries = 5
-        response = _get_auth_response_with_retries(
+        response = get_auth_response_with_retries(
             lambda: self._mock_request_generator_with_bad_response(),
             num_of_retries=num_of_retries,
             auth_wait_time_sec=0,

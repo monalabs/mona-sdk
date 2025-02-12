@@ -10,12 +10,6 @@ NORMALIZED_HASH_DECIMAL_DIGITS = 7
 NORMALIZED_HASH_PRECISION = 10**NORMALIZED_HASH_DECIMAL_DIGITS
 
 
-def get_boolean_value_for_env_var(env_var, default_value):
-    return {"True": True, "true": True, "False": False, "false": False}.get(
-        os.environ.get(env_var), default_value
-    )
-
-
 def get_dict_value_for_env_var(env_var, cast_values=None, default_value=None):
     """
     Expects a valid json string (or empty). cast_values allows to cast (and verify
@@ -79,3 +73,13 @@ def keep_message_after_sampling(context_id, sampling_rate):
 
 def get_dict_result(success, data, error_message):
     return {"success": success, "data": data, "error_message": error_message}
+
+
+def ged_dict_with_filtered_out_none_values(message):
+    return {key: val for key, val in message.items() if val is not None}
+
+
+def get_boolean_value_for_env_var(env_var, default_value):
+    return {"True": True, "true": True, "False": False, "false": False}.get(
+        os.environ.get(env_var), default_value
+    )
