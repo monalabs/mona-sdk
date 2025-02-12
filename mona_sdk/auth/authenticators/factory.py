@@ -10,13 +10,23 @@ from mona_sdk.auth.authenticators.no_auth import NoAuth
 from mona_sdk.auth.authenticators.manual_token import ManualTokenAuth
 
 
-def get_authenticator(auth_mode, should_use_authentication, **kwargs):
+def _get_cls(should_use_authentication, access_token, auth_mode):
+    if not should_use_authentication:
+        return NoAuth
 
-    # For backward compatibility.
-    cls = AUTH_MODE_MAP[auth_mode if should_use_authentication else NO_AUTH_MODE]
+    if access_token:
+        return ManualTokenAuth
+
+    return AUTH_MODE_MAP[auth_mode if should_use_authentication else NO_AUTH_MODE]
+
+
+def get_authenticator(auth_mode, should_use_authentication, access_token, **kwargs):
+    cls = _get_cls(should_use_authentication, access_token, auth_mode)
+
     valid_keys = cls.get_valid_keys()
+    kwargs_with_access_token = {**kwargs, "access_token": access_token}
+    filtered_kwargs = {k: v for k, v in kwargs_with_access_token.items() if k in valid_keys}
 
-    filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
     return cls(**filtered_kwargs)
 
 
