@@ -154,7 +154,7 @@ class ClientTests(unittest.TestCase):
             MonaSingleMessage(
                 message=good_message,
                 contextClass="TEST_CONTEXT_CLASS",
-                exportTimestamp=12345678,
+                sendTimestamp=12345678,
             )
         )
         self.assertFalse(res)
@@ -200,7 +200,7 @@ class ClientTests(unittest.TestCase):
                 MonaSingleMessage(
                     message={"a": "some data"},
                     contextClass="TEST_CONTEXT_CLASS",
-                    exportTimestamp="12345678",
+                    sendTimestamp="12345678",
                 )
             )
 
@@ -251,19 +251,19 @@ class ClientTests(unittest.TestCase):
             contextClass="TEST_CONTEXT_CLASS",
             # When provided as a number, export_timestamp must have 10/13 digits
             # (seconds/ms since epoch).
-            exportTimestamp=123456789,
+            sendTimestamp=123456789,
         )
         wrong_export_timestamp_string_event = MonaSingleMessage(
             message={"a": "some data"},
             contextClass="TEST_CONTEXT_CLASS",
-            exportTimestamp="this is not a timestamp",
+            sendTimestamp="this is not a timestamp",
         )
         wrong_context_class_event = MonaSingleMessage(
             message={"a": "some data"},
             # contextClass cannot end with "."
             contextClass="A.",
-            # exportTimestamp can also be an ISO-format date (str).
-            exportTimestamp=datetime.now().isoformat(),
+            # sendTimestamp can also be an ISO-format date (str).
+            sendTimestamp=datetime.now().isoformat(),
         )
         self._assert_batch_return_values(
             [

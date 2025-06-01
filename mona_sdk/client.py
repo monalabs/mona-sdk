@@ -322,7 +322,9 @@ class Client:
             self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
         )
         endpoint_name = (
-            "export" if self.authenticator.is_authentication_used() else "monaExport"
+            "sendEvent"
+            if self.authenticator.is_authentication_used()
+            else "monaSendEvent"
         )
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
@@ -370,6 +372,9 @@ class Client:
         )
         return export_result and export_result["failed"] == 0
 
+    # An alias to the export function, for backward compatibility.
+    send_event = export
+
     @Decorators.refresh_token_if_needed
     def export_batch(
         self,
@@ -400,6 +405,9 @@ class Client:
         return self._export_batch_inner(
             events, default_action, filter_none_fields=filter_none_fields
         )
+
+    # An alias to the export_batch function, for backward compatibility.
+    send_events_batch = export_batch
 
     def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)
