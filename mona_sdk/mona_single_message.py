@@ -47,7 +47,7 @@ class MonaSingleMessage:
                     stacklevel=2,
                 )
 
-            self.send_timestamp = self.__dict__["exportTimestamp"]
+            self.sendTimestamp = self.__dict__["exportTimestamp"]
 
     message: dict
     contextClass: str
