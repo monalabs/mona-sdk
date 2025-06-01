@@ -353,7 +353,7 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
-    def export(self, message: MonaSingleMessage, filter_none_fields=None):
+    def send_event(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
 
@@ -372,11 +372,11 @@ class Client:
         )
         return export_result and export_result["failed"] == 0
 
-    # An alias to the export function, for backward compatibility.
-    send_event = export
+    # An alias to the send_event function, for backward compatibility.
+    export = send_event
 
     @Decorators.refresh_token_if_needed
-    def export_batch(
+    def send_events_batch(
         self,
         events: List[MonaSingleMessage],
         default_action=None,
@@ -406,8 +406,8 @@ class Client:
             events, default_action, filter_none_fields=filter_none_fields
         )
 
-    # An alias to the export_batch function, for backward compatibility.
-    send_events_batch = export_batch
+    # An alias to the send_events_batch function, for backward compatibility.
+    export_batch = send_events_batch
 
     def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)

@@ -126,7 +126,7 @@ class ClientTests(unittest.TestCase):
 
         # Test a correct written message export.
         mock_request.return_value.ok = True
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(message=good_message, contextClass="TEST_CONTEXT_CLASS")
         )
         self.assertTrue(res)
@@ -138,19 +138,19 @@ class ClientTests(unittest.TestCase):
             "failure_reasons": {},
         }
         # Test an empty message export.
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(message=None, contextClass="TEST_CONTEXT_CLASS")
         )
         self.assertFalse(res)
 
         # Test an empty string context_class.
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(message=good_message, contextClass="")
         )
         self.assertFalse(res)
 
         # Test illegal export_timestamp type (must have 10/13 digits).
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(
                 message=good_message,
                 contextClass="TEST_CONTEXT_CLASS",
@@ -160,7 +160,7 @@ class ClientTests(unittest.TestCase):
         self.assertFalse(res)
 
         # Test illegal context_id type (must be a string).
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(
                 message=good_message,
                 contextClass="TEST_CONTEXT_CLASS",
@@ -171,7 +171,7 @@ class ClientTests(unittest.TestCase):
 
         # Test un-matching context_id and context_class: context_id cannot have
         # more '.' than context_class (wrong use of sub-contexts).
-        res = test_mona_client.export(
+        res = test_mona_client.send_event(
             MonaSingleMessage(
                 message=good_message,
                 contextClass="TEST_CONTEXT_CLASS",
@@ -196,7 +196,7 @@ class ClientTests(unittest.TestCase):
         with self.assertRaises(MonaExportException):
             # Test illegal export_timestamp type (can be a string describing a
             # number, but must be of length 10/13).
-            test_mona_client.export(
+            test_mona_client.send_event(
                 MonaSingleMessage(
                     message={"a": "some data"},
                     contextClass="TEST_CONTEXT_CLASS",
@@ -222,7 +222,7 @@ class ClientTests(unittest.TestCase):
             "failure_reasons": {},
         }
 
-        res = test_mona_client.export_batch(events)
+        res = test_mona_client.send_events_batch(events)
         self.assertEqual(res["total"], expected_total)
         self.assertEqual(res["sent"], expected_sent)
         self.assertEqual(res["failed"], expected_failed)
@@ -231,7 +231,7 @@ class ClientTests(unittest.TestCase):
         test_mona_client = self._init_test_client(raise_export_exceptions=True)
         if expected_failed > 0:
             with self.assertRaises(MonaExportException):
-                test_mona_client.export_batch(events)
+                test_mona_client.send_events_batch(events)
 
     def test_export_batch(self):
         """
