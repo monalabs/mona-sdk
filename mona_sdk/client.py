@@ -77,6 +77,14 @@ RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
+USE_SEND_EVENT_ENDPOINT = get_boolean_value_for_env_var(
+    "MONA_SDK_USE_SEND_EVENT_ENDPOINT", False
+)
+
+AUTHENTICATED_ENDPOINT = "sendEvent" if USE_SEND_EVENT_ENDPOINT else "export"
+
+UNAUTHENTICATED_ENDPOINT = "monaSendEvent" if USE_SEND_EVENT_ENDPOINT else "monaExport"
+
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
@@ -322,7 +330,9 @@ class Client:
             self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
         )
         endpoint_name = (
-            "export" if self.authenticator.is_authentication_used() else "monaExport"
+            AUTHENTICATED_ENDPOINT
+            if self.authenticator.is_authentication_used()
+            else UNAUTHENTICATED_ENDPOINT
         )
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
@@ -351,7 +361,7 @@ class Client:
         )
 
     @Decorators.refresh_token_if_needed
-    def export(self, message: MonaSingleMessage, filter_none_fields=None):
+    def send_event(self, message: MonaSingleMessage, filter_none_fields=None):
         """
         Exports a single message to Mona's systems.
 
@@ -370,8 +380,11 @@ class Client:
         )
         return export_result and export_result["failed"] == 0
 
+    # An alias to the send_event function, for backward compatibility.
+    export = send_event
+
     @Decorators.refresh_token_if_needed
-    def export_batch(
+    def send_events_batch(
         self,
         events: List[MonaSingleMessage],
         default_action=None,
@@ -400,6 +413,9 @@ class Client:
         return self._export_batch_inner(
             events, default_action, filter_none_fields=filter_none_fields
         )
+
+    # An alias to the send_events_batch function, for backward compatibility.
+    export_batch = send_events_batch
 
     def _should_add_message_to_sampled_data(self, message):
         context_class = message.get(CONTEXT_CLASS_FIELD_NAME)

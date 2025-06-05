@@ -1,4 +1,7 @@
+import warnings
 from dataclasses import dataclass
+
+ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = False
 
 
 @dataclass
@@ -16,7 +19,7 @@ class MonaSingleMessage:
             If none is given, Mona will create a random uuid for it. This is highly
             unrecommended - since it takes away the option to update this data in the
             future.
-        :param exportTimestamp (int|str): (Optional) This is the primary timestamp Mona
+        :param sendTimestamp (int|str): (Optional) This is the primary timestamp Mona
             will use when considering the data being sent. It should be a date (ISO
             string or a Unix time number) representing the time the message was created.
             If not supplied, current time is used.
@@ -29,7 +32,7 @@ class MonaSingleMessage:
         message=<the relevant monitoring information>,
         contextClass="MY_CONTEXT_CLASS_NAME",
         contextId=<the context instance unique id>,
-        exportTimestamp=<the message export timestamp>,
+        sendTimestamp=<the message export timestamp>,
         action=<the wanted action>
     )
     """
@@ -37,9 +40,24 @@ class MonaSingleMessage:
     message: dict
     contextClass: str
     contextId: str = None
-    exportTimestamp: int or str = None
     action: str = None
     sampleConfigName: str = None
+
+    exportTimestamp: int or str = None
+    sendTimestamp: int or str = None
+
+    def __post_init__(self):
+        if self.exportTimestamp is not None and self.sendTimestamp is None:
+
+            if ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP:
+                warnings.warn(
+                    "'exportTimestamp' is deprecated. Use 'sendTimestamp' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+            self.sendTimestamp = self.exportTimestamp
+            del self.exportTimestamp
 
     def get_dict(self):
         return {
