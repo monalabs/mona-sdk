@@ -37,6 +37,15 @@ class MonaSingleMessage:
     )
     """
 
+    message: dict
+    contextClass: str
+    contextId: str = None
+    action: str = None
+    sampleConfigName: str = None
+
+    exportTimestamp: int or str = None
+    sendTimestamp: int or str = None
+
     def __post_init__(self):
         if self.exportTimestamp is not None and self.sendTimestamp is None:
 
@@ -47,16 +56,8 @@ class MonaSingleMessage:
                     stacklevel=2,
                 )
 
-            self.sendTimestamp = self.__dict__["exportTimestamp"]
-
-    message: dict
-    contextClass: str
-    contextId: str = None
-    action: str = None
-    sampleConfigName: str = None
-
-    exportTimestamp: int or str = None
-    sendTimestamp: int or str = None
+            self.sendTimestamp = self.exportTimestamp
+            del self.exportTimestamp
 
     def get_dict(self):
         return {

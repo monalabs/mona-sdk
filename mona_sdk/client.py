@@ -77,6 +77,14 @@ RAISE_SERVICE_EXCEPTIONS = get_boolean_value_for_env_var(
     "MONA_SDK_RAISE_SERVICE_EXCEPTIONS", False
 )
 
+USE_SEND_EVENT_ENDPOINT = get_boolean_value_for_env_var(
+    "MONA_SDK_USE_SEND_EVENT_ENDPOINT", False
+)
+
+AUTHENTICATED_ENDPOINT = "sendEvent" if USE_SEND_EVENT_ENDPOINT else "export"
+
+UNAUTHENTICATED_ENDPOINT = "monaSendEvent" if USE_SEND_EVENT_ENDPOINT else "monaExport"
+
 
 SHOULD_USE_SSL = get_boolean_value_for_env_var("MONA_SDK_SHOULD_USE_SSL", True)
 
@@ -322,9 +330,9 @@ class Client:
             self._override_rest_api_host or f"incoming{self._user_id}.monalabs.io"
         )
         endpoint_name = (
-            "sendEvent"
+            AUTHENTICATED_ENDPOINT
             if self.authenticator.is_authentication_used()
-            else "monaSendEvent"
+            else UNAUTHENTICATED_ENDPOINT
         )
         return f"{http_protocol}://{host_name}/{endpoint_name}"
 
