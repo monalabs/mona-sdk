@@ -1,6 +1,5 @@
 import warnings
 from dataclasses import dataclass
-from os import environ
 
 from mona_sdk.client_util import get_boolean_value_for_env_var
 
@@ -13,7 +12,7 @@ MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = (
 
 # This flag controls whether to use the new 'sendTimestamp' field instead of the
 # deprecated 'exportTimestamp' field when sending messages to Mona servers.
-# TODO: Remove this flag and always use 'sendTimestamp' once all incoming servers
+# TODO(elie): Remove this flag and always use 'sendTimestamp' once all incoming servers
 #  support the new format.
 MONA_SDK_USE_SEND_TIMESTAMP_FIELD = get_boolean_value_for_env_var(
     "MONA_SDK_USE_SEND_TIMESTAMP_FIELD", False
