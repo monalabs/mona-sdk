@@ -6,13 +6,12 @@ from mona_sdk.client_util import get_boolean_value_for_env_var
 
 MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = (
     get_boolean_value_for_env_var(
-        environ.get("MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP"), False
+        "MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP", False
     )
 )
 
-
 MONA_SDK_USE_SEND_TIMESTAMP_FIELD = get_boolean_value_for_env_var(
-    environ.get("MONA_SDK_USE_SEND_TIMESTAMP_FIELD"), False
+    "MONA_SDK_USE_SEND_TIMESTAMP_FIELD", False
 )
 
 
