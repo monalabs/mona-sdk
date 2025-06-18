@@ -10,6 +10,11 @@ MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = (
     )
 )
 
+
+# This flag controls whether to use the new 'sendTimestamp' field instead of the
+# deprecated 'exportTimestamp' field when sending messages to Mona servers.
+# TODO: Remove this flag and always use 'sendTimestamp' once all incoming servers
+#  support the new format.
 MONA_SDK_USE_SEND_TIMESTAMP_FIELD = get_boolean_value_for_env_var(
     "MONA_SDK_USE_SEND_TIMESTAMP_FIELD", False
 )
@@ -58,13 +63,8 @@ class MonaSingleMessage:
     sendTimestamp: int or str = None
 
     def __post_init__(self):
-        if not MONA_SDK_USE_SEND_TIMESTAMP_FIELD:
 
-            if self.exportTimestamp is None and self.sendTimestamp is not None:
-                self.exportTimestamp = self.sendTimestamp
-                del self.sendTimestamp
-
-        else:
+        if MONA_SDK_USE_SEND_TIMESTAMP_FIELD:
 
             if self.exportTimestamp is not None and self.sendTimestamp is None:
                 self.sendTimestamp = self.exportTimestamp
@@ -76,6 +76,11 @@ class MonaSingleMessage:
                         DeprecationWarning,
                         stacklevel=2,
                     )
+        else:
+
+            if self.exportTimestamp is None and self.sendTimestamp is not None:
+                self.exportTimestamp = self.sendTimestamp
+                del self.sendTimestamp
 
     def get_dict(self):
         return {
