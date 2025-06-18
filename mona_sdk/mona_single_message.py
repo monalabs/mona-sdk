@@ -1,7 +1,22 @@
 import warnings
 from dataclasses import dataclass
 
-ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = False
+from mona_sdk.client_util import get_boolean_value_for_env_var
+
+MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP = (
+    get_boolean_value_for_env_var(
+        "MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP", False
+    )
+)
+
+
+# This flag controls whether to use the new 'sendTimestamp' field instead of the
+# deprecated 'exportTimestamp' field when sending messages to Mona servers.
+# TODO(elie): Remove this flag and always use 'sendTimestamp' once all incoming servers
+#  support the new format.
+MONA_SDK_USE_SEND_TIMESTAMP_FIELD = get_boolean_value_for_env_var(
+    "MONA_SDK_USE_SEND_TIMESTAMP_FIELD", False
+)
 
 
 @dataclass
@@ -47,17 +62,24 @@ class MonaSingleMessage:
     sendTimestamp: int or str = None
 
     def __post_init__(self):
-        if self.exportTimestamp is not None and self.sendTimestamp is None:
 
-            if ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP:
-                warnings.warn(
-                    "'exportTimestamp' is deprecated. Use 'sendTimestamp' instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+        if MONA_SDK_USE_SEND_TIMESTAMP_FIELD:
 
-            self.sendTimestamp = self.exportTimestamp
-            del self.exportTimestamp
+            if self.exportTimestamp is not None and self.sendTimestamp is None:
+                self.sendTimestamp = self.exportTimestamp
+                del self.exportTimestamp
+
+                if MONA_SDK_ENABLE_DEPRECATION_WARNINGS_ON_EXPORT_TIMESTAMP:
+                    warnings.warn(
+                        "'exportTimestamp' is deprecated. Use 'sendTimestamp' instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+        else:
+
+            if self.exportTimestamp is None and self.sendTimestamp is not None:
+                self.exportTimestamp = self.sendTimestamp
+                del self.sendTimestamp
 
     def get_dict(self):
         return {
